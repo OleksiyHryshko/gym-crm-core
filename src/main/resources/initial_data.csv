@@ -1,0 +1,5 @@
+type,id,firstName,lastName,active,specialization,dateOfBirth,address,username,password
+TRAINER,1,John,Doe,true,Fitness,,,John.Doe,trainer123
+TRAINER,2,Jane,Smith,true,Yoga,,,Jane.Smith,trainer456
+TRAINEE,3,Alice,Brown,true,,1995-04-12,12 Oak Street,Alice.Brown,trainee123
+TRAINEE,4,Bob,Wilson,true,,1990-09-25,"45 Main Street, Apt 2",Bob.Wilson,trainee456
