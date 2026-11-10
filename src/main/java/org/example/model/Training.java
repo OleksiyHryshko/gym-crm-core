@@ -3,6 +3,7 @@ package org.example.model;
 import java.time.LocalDate;
 
 public class Training {
+    private Long trainingId;
     private Long traineeId;
     private Long trainerId;
     private String trainingName;
@@ -21,6 +22,9 @@ public class Training {
         this.trainingDate = trainingDate;
         this.trainingDuration = trainingDuration;
     }
+
+    public Long getTrainingId() { return trainingId; }
+    public void setTrainingId(Long trainingId) { this.trainingId = trainingId; }
 
     public Long getTraineeId() { return traineeId; }
     public void setTraineeId(Long traineeId) { this.traineeId = traineeId; }

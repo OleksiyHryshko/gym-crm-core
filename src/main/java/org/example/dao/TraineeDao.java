@@ -21,11 +21,16 @@ public class TraineeDao {
     }
 
     public Trainee save(Trainee trainee) {
+        if (trainee == null) {
+            throw new IllegalArgumentException("Trainee must not be null");
+        }
         if (trainee.getUserId() == null) {
             while (storage.containsKey(idCounter)) {
                 idCounter++;
             }
             trainee.setUserId(idCounter++);
+        } else if (storage.containsKey(trainee.getUserId())) {
+            throw new IllegalArgumentException("Trainee with ID " + trainee.getUserId() + " already exists");
         }
         storage.put(trainee.getUserId(), trainee);
         return trainee;
@@ -40,6 +45,12 @@ public class TraineeDao {
     }
 
     public Trainee update(Trainee trainee) {
+        if (trainee == null || trainee.getUserId() == null) {
+            throw new IllegalArgumentException("Trainee and trainee ID must not be null");
+        }
+        if (!storage.containsKey(trainee.getUserId())) {
+            throw new IllegalArgumentException("Trainee with ID " + trainee.getUserId() + " does not exist");
+        }
         storage.put(trainee.getUserId(), trainee);
         return trainee;
     }

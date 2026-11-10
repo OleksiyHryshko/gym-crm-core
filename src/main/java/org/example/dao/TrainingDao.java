@@ -21,10 +21,14 @@ public class TrainingDao {
     }
 
     public Training save(Training training) {
+        if (training == null) {
+            throw new IllegalArgumentException("Training must not be null");
+        }
         while (storage.containsKey(idCounter)) {
             idCounter++;
         }
         Long trainingId = idCounter++;
+        training.setTrainingId(trainingId);
         storage.put(trainingId, training);
         return training;
     }

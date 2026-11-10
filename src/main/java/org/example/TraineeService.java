@@ -7,26 +7,35 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import org.example.dao.TrainerDao;
+import org.example.model.User;
+import java.util.ArrayList;
 import java.util.Optional;
-import java.util.Random;
 
 @Service
 public class TraineeService {
 
     private static final Logger logger = LoggerFactory.getLogger(TraineeService.class);
     private TraineeDao traineeDao;
+    private TrainerDao trainerDao;
 
     @Autowired
     public void setTraineeDao(TraineeDao traineeDao) {
         this.traineeDao = traineeDao;
     }
 
+    @Autowired
+    public void setTrainerDao(TrainerDao trainerDao) {
+        this.trainerDao = trainerDao;
+    }
+
     public Trainee createTrainee(Trainee trainee) {
+        validateTrainee(trainee, false);
         logger.info("Creating new Trainee profile for {} {}", trainee.getFirstName(), trainee.getLastName());
 
-        trainee.setUserName(generateUsername(trainee.getFirstName(), trainee.getLastName()));
-        trainee.setPassword(generatePassword());
+        trainee.setUserName(UserCredentialsGenerator.generateUsername(
+                trainee.getFirstName(), trainee.getLastName(), allUsers()));
+        trainee.setPassword(UserCredentialsGenerator.generatePassword());
 
         Trainee savedTrainee = traineeDao.save(trainee);
         logger.info("Trainee profile created successfully with ID: {}", savedTrainee.getUserId());
@@ -34,47 +43,50 @@ public class TraineeService {
     }
 
     public Trainee updateTrainee(Trainee trainee) {
+        validateTrainee(trainee, true);
         logger.info("Updating Trainee profile with ID: {}", trainee.getUserId());
         return traineeDao.update(trainee);
     }
 
     public void deleteTrainee(Long id) {
+        validateId(id, "Trainee ID");
         logger.info("Deleting Trainee profile with ID: {}", id);
         traineeDao.delete(id);
     }
 
     public Optional<Trainee> getTraineeById(Long id) {
+        validateId(id, "Trainee ID");
         logger.info("Fetching Trainee profile with ID: {}", id);
         return traineeDao.findById(id);
     }
 
-    private String generateUsername(String firstName, String lastName) {
-        String baseUsername = firstName + "." + lastName;
-        String username = baseUsername;
-        int suffix = 1;
-
-        while (isUsernameTaken(username)) {
-            username = baseUsername + suffix;
-            suffix++;
+    private ArrayList<User> allUsers() {
+        ArrayList<User> users = new ArrayList<>(traineeDao.findAll());
+        if (trainerDao != null) {
+            users.addAll(trainerDao.findAll());
         }
-
-        logger.debug("Generated unique username: {}", username);
-        return username;
+        return users;
     }
 
-    private boolean isUsernameTaken(String username) {
-        List<Trainee> allTrainees = traineeDao.findAll();
-        return allTrainees.stream()
-                .anyMatch(t -> username.equals(t.getUserName()));
+    private void validateTrainee(Trainee trainee, boolean update) {
+        if (trainee == null) {
+            throw new IllegalArgumentException("Trainee must not be null");
+        }
+        if (!update && trainee.getUserId() != null) {
+            throw new IllegalArgumentException("New trainee must not have an ID");
+        }
+        if (isBlank(trainee.getFirstName()) || isBlank(trainee.getLastName())) {
+            throw new IllegalArgumentException("Trainee first name and last name must not be blank");
+        }
     }
 
-    private String generatePassword() {
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        StringBuilder sb = new StringBuilder(10);
-        Random random = new Random();
-        for (int i = 0; i < 10; i++) {
-            sb.append(chars.charAt(random.nextInt(chars.length())));
+    private void validateId(Long id, String label) {
+        if (id == null || id <= 0) {
+            throw new IllegalArgumentException(label + " must be positive");
         }
-        return sb.toString();
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }

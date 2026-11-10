@@ -22,6 +22,7 @@ public class TrainingService {
     }
 
     public Training createTraining(Training training) {
+        validateTraining(training);
         logger.info("Creating new Training: {}", training.getTrainingName());
         Training savedTraining = trainingDao.save(training);
         logger.info("Training created successfully");
@@ -29,7 +30,16 @@ public class TrainingService {
     }
 
     public Optional<Training> getTrainingById(Long id) {
+        if (id == null || id <= 0) {
+            throw new IllegalArgumentException("Training ID must be positive");
+        }
         logger.info("Fetching Training with ID: {}", id);
         return trainingDao.findById(id);
+    }
+
+    private void validateTraining(Training training) {
+        if (training == null) {
+            throw new IllegalArgumentException("Training must not be null");
+        }
     }
 }

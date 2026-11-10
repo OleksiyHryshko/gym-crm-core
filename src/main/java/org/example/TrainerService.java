@@ -7,26 +7,35 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import org.example.dao.TraineeDao;
+import org.example.model.User;
+import java.util.ArrayList;
 import java.util.Optional;
-import java.util.Random;
 
 @Service
 public class TrainerService {
 
     private static final Logger logger = LoggerFactory.getLogger(TrainerService.class);
     private TrainerDao trainerDao;
+    private TraineeDao traineeDao;
 
     @Autowired
     public void setTrainerDao(TrainerDao trainerDao) {
         this.trainerDao = trainerDao;
     }
 
+    @Autowired
+    public void setTraineeDao(TraineeDao traineeDao) {
+        this.traineeDao = traineeDao;
+    }
+
     public Trainer createTrainer(Trainer trainer) {
+        validateTrainer(trainer, false);
         logger.info("Creating new Trainer profile for {} {}", trainer.getFirstName(), trainer.getLastName());
 
-        trainer.setUserName(generateUsername(trainer.getFirstName(), trainer.getLastName()));
-        trainer.setPassword(generatePassword());
+        trainer.setUserName(UserCredentialsGenerator.generateUsername(
+                trainer.getFirstName(), trainer.getLastName(), allUsers()));
+        trainer.setPassword(UserCredentialsGenerator.generatePassword());
 
         Trainer savedTrainer = trainerDao.save(trainer);
         logger.info("Trainer profile created successfully with ID: {}", savedTrainer.getUserId());
@@ -34,42 +43,46 @@ public class TrainerService {
     }
 
     public Trainer updateTrainer(Trainer trainer) {
+        validateTrainer(trainer, true);
         logger.info("Updating Trainer profile with ID: {}", trainer.getUserId());
         return trainerDao.update(trainer);
     }
 
     public Optional<Trainer> getTrainerById(Long id) {
+        validateId(id, "Trainer ID");
         logger.info("Fetching Trainer profile with ID: {}", id);
         return trainerDao.findById(id);
     }
 
-    private String generateUsername(String firstName, String lastName) {
-        String baseUsername = firstName + "." + lastName;
-        String username = baseUsername;
-        int suffix = 1;
-
-        while (isUsernameTaken(username)) {
-            username = baseUsername + suffix;
-            suffix++;
+    private ArrayList<User> allUsers() {
+        ArrayList<User> users = new ArrayList<>(trainerDao.findAll());
+        if (traineeDao != null) {
+            users.addAll(traineeDao.findAll());
         }
-
-        logger.debug("Generated unique username: {}", username);
-        return username;
+        return users;
     }
 
-    private boolean isUsernameTaken(String username) {
-        List<Trainer> allTrainers = trainerDao.findAll();
-        return allTrainers.stream()
-                .anyMatch(t -> username.equals(t.getUserName()));
+    private void validateTrainer(Trainer trainer, boolean update) {
+        if (trainer == null) {
+            throw new IllegalArgumentException("Trainer must not be null");
+        }
+        if (update) {
+            validateId(trainer.getUserId(), "Trainer ID");
+        } else if (trainer.getUserId() != null) {
+            throw new IllegalArgumentException("New trainer must not have an ID");
+        }
+        if (isBlank(trainer.getFirstName()) || isBlank(trainer.getLastName())) {
+            throw new IllegalArgumentException("Trainer first name and last name must not be blank");
+        }
     }
 
-    private String generatePassword() {
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        StringBuilder sb = new StringBuilder(10);
-        Random random = new Random();
-        for (int i = 0; i < 10; i++) {
-            sb.append(chars.charAt(random.nextInt(chars.length())));
+    private void validateId(Long id, String label) {
+        if (id == null || id <= 0) {
+            throw new IllegalArgumentException(label + " must be positive");
         }
-        return sb.toString();
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }

@@ -20,11 +20,16 @@ public class TrainerDao {
         this.storage = trainerStorage;
     }
     public Trainer save(Trainer trainer) {
+        if (trainer == null) {
+            throw new IllegalArgumentException("Trainer must not be null");
+        }
         if (trainer.getUserId() == null) {
             while (storage.containsKey(idCounter)) {
                 idCounter++;
             }
             trainer.setUserId(idCounter++);
+        } else if (storage.containsKey(trainer.getUserId())) {
+            throw new IllegalArgumentException("Trainer with ID " + trainer.getUserId() + " already exists");
         }
         storage.put(trainer.getUserId(), trainer);
         return trainer;
@@ -39,6 +44,12 @@ public class TrainerDao {
     }
 
     public Trainer update(Trainer trainer) {
+        if (trainer == null || trainer.getUserId() == null) {
+            throw new IllegalArgumentException("Trainer and trainer ID must not be null");
+        }
+        if (!storage.containsKey(trainer.getUserId())) {
+            throw new IllegalArgumentException("Trainer with ID " + trainer.getUserId() + " does not exist");
+        }
         storage.put(trainer.getUserId(), trainer);
         return trainer;
     }
