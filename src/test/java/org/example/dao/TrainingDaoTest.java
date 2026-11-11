@@ -27,6 +27,7 @@ class TrainingDaoTest {
         assertSame(training, trainingDao.save(training));
         assertEquals(1, storage.size());
         assertSame(training, storage.get(1L));
+        assertEquals(1L, training.getTrainingId());
     }
 
     @Test

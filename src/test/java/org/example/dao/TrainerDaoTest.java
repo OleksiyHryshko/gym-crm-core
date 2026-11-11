@@ -54,4 +54,26 @@ class TrainerDaoTest {
 
         assertEquals(2, all.size());
     }
+
+    @Test
+    void update_WhenIdDoesNotExist_ShouldThrowException() {
+        Trainer trainer = new Trainer("A", "A", true, "Cardio");
+        trainer.setUserId(99L);
+
+        assertThrows(IllegalArgumentException.class, () -> trainerDao.update(trainer));
+        assertFalse(storage.containsKey(99L));
+    }
+
+    @Test
+    void save_WhenIdAlreadyExists_ShouldThrowException() {
+        Trainer existing = new Trainer("Alice", "Smith", true, "Cardio");
+        existing.setUserId(1L);
+        storage.put(1L, existing);
+
+        Trainer duplicate = new Trainer("Bob", "Jones", true, "Weights");
+        duplicate.setUserId(1L);
+
+        assertThrows(IllegalArgumentException.class, () -> trainerDao.save(duplicate));
+        assertSame(existing, storage.get(1L));
+    }
 }

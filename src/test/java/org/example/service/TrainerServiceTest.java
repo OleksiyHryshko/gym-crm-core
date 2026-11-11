@@ -74,4 +74,16 @@ class TrainerServiceTest {
         assertTrue(result.isPresent());
         assertEquals("John", result.get().getFirstName());
     }
+
+    @Test
+    void createTrainer_WhenSpecializationIsNull_ShouldThrowException() {
+        testTrainer.setSpecialization(null);
+
+        assertThrows(IllegalArgumentException.class, () -> trainerService.createTrainer(testTrainer));
+    }
+
+    @Test
+    void createTrainer_WhenTrainerIsNull_ShouldThrowException() {
+        assertThrows(IllegalArgumentException.class, () -> trainerService.createTrainer(null));
+    }
 }

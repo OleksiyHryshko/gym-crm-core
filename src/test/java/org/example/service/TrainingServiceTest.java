@@ -3,6 +3,7 @@ package org.example.service;
 import org.example.TrainingService;
 import org.example.dao.TrainingDao;
 import org.example.model.Training;
+import org.example.model.TrainingType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -10,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
+import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -25,7 +27,7 @@ class TrainingServiceTest {
 
     @Test
     void createTraining_ShouldDelegateToDao() {
-        Training training = new Training();
+        Training training = validTraining();
         when(trainingDao.save(training)).thenReturn(training);
 
         assertSame(training, trainingService.createTraining(training));
@@ -41,5 +43,71 @@ class TrainingServiceTest {
         assertEquals(Optional.of(training), trainingService.getTrainingById(1L));
 
         verify(trainingDao).findById(1L);
+    }
+
+    @Test
+    void createTraining_WhenTrainingIsNull_ShouldThrowException() {
+        assertThrows(IllegalArgumentException.class, () -> trainingService.createTraining(null));
+    }
+
+    @Test
+    void createTraining_WhenTrainingNameIsBlank_ShouldThrowException() {
+        Training training = validTraining();
+        training.setTrainingName(" ");
+
+        assertThrows(IllegalArgumentException.class, () -> trainingService.createTraining(training));
+    }
+
+    @Test
+    void createTraining_WhenRequiredFieldIsMissing_ShouldThrowException() {
+        Training training = validTraining();
+        training.setTrainingType(null);
+
+        assertThrows(IllegalArgumentException.class, () -> trainingService.createTraining(training));
+    }
+
+    @Test
+    void createTraining_WhenTrainingDateIsMissing_ShouldThrowException() {
+        Training training = validTraining();
+        training.setTrainingDate(null);
+
+        assertThrows(IllegalArgumentException.class, () -> trainingService.createTraining(training));
+    }
+
+    @Test
+    void createTraining_WhenDurationIsNotPositive_ShouldThrowException() {
+        Training training = validTraining();
+        training.setTrainingDuration(0);
+
+        assertThrows(IllegalArgumentException.class, () -> trainingService.createTraining(training));
+    }
+
+    @Test
+    void createTraining_WhenDurationIsMissing_ShouldThrowException() {
+        Training training = validTraining();
+        training.setTrainingDuration(null);
+
+        assertThrows(IllegalArgumentException.class, () -> trainingService.createTraining(training));
+    }
+
+    @Test
+    void createTraining_WhenParticipantIdIsMissing_ShouldThrowException() {
+        Training training = validTraining();
+        training.setTraineeId(null);
+
+        assertThrows(IllegalArgumentException.class, () -> trainingService.createTraining(training));
+    }
+
+    @Test
+    void createTraining_WhenTrainerIdIsMissing_ShouldThrowException() {
+        Training training = validTraining();
+        training.setTrainerId(null);
+
+        assertThrows(IllegalArgumentException.class, () -> trainingService.createTraining(training));
+    }
+
+    private Training validTraining() {
+        return new Training(1L, 2L, "Strength training",
+                new TrainingType("Strength"), LocalDate.of(2026, 1, 1), 60);
     }
 }

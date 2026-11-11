@@ -74,6 +74,9 @@ public class TrainerService {
         if (isBlank(trainer.getFirstName()) || isBlank(trainer.getLastName())) {
             throw new IllegalArgumentException("Trainer first name and last name must not be blank");
         }
+        if (trainer.getSpecialization() == null) {
+            throw new IllegalArgumentException("Trainer specialization is required");
+        }
     }
 
     private void validateId(Long id, String label) {

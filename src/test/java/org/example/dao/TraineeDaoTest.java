@@ -60,6 +60,28 @@ class TraineeDaoTest {
     }
 
     @Test
+    void update_WhenIdDoesNotExist_ShouldThrowException() {
+        Trainee trainee = trainee("John");
+        trainee.setUserId(99L);
+
+        assertThrows(IllegalArgumentException.class, () -> traineeDao.update(trainee));
+        assertFalse(storage.containsKey(99L));
+    }
+
+    @Test
+    void save_WhenIdAlreadyExists_ShouldThrowException() {
+        Trainee existing = trainee("John");
+        existing.setUserId(1L);
+        storage.put(1L, existing);
+
+        Trainee duplicate = trainee("Jane");
+        duplicate.setUserId(1L);
+
+        assertThrows(IllegalArgumentException.class, () -> traineeDao.save(duplicate));
+        assertSame(existing, storage.get(1L));
+    }
+
+    @Test
     void delete_ShouldRemoveTrainee() {
         storage.put(1L, trainee("John"));
 

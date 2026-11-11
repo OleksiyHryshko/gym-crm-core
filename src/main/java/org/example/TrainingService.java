@@ -41,5 +41,23 @@ public class TrainingService {
         if (training == null) {
             throw new IllegalArgumentException("Training must not be null");
         }
+        if (training.getTrainingName() == null || training.getTrainingName().trim().isEmpty()) {
+            throw new IllegalArgumentException("Training name is required");
+        }
+        if (training.getTrainingType() == null) {
+            throw new IllegalArgumentException("Training type is required");
+        }
+        if (training.getTrainingDate() == null) {
+            throw new IllegalArgumentException("Training date is required");
+        }
+        if (training.getTrainingDuration() == null || training.getTrainingDuration() <= 0) {
+            throw new IllegalArgumentException("Training duration must be greater than 0");
+        }
+        if (training.getTraineeId() == null) {
+            throw new IllegalArgumentException("Trainee ID is required");
+        }
+        if (training.getTrainerId() == null) {
+            throw new IllegalArgumentException("Trainer ID is required");
+        }
     }
 }
