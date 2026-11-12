@@ -17,7 +17,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
-@Component
 public class StorageInitializationBeanPostProcessor implements BeanPostProcessor {
 
     private static final Logger logger = LoggerFactory.getLogger(StorageInitializationBeanPostProcessor.class);
@@ -48,7 +47,7 @@ public class StorageInitializationBeanPostProcessor implements BeanPostProcessor
                         Boolean.parseBoolean(columns.get(4)),
                         columns.get(5));
                 trainer.setUserId(Long.valueOf(columns.get(1)));
-                setCredentials(trainer, columns);
+                setCredentials(trainer.getUser(), columns);
                 storage.put(trainer.getUserId(), trainer);
             }
         });
@@ -66,7 +65,7 @@ public class StorageInitializationBeanPostProcessor implements BeanPostProcessor
                         LocalDate.parse(columns.get(6)),
                         columns.get(7));
                 trainee.setUserId(Long.valueOf(columns.get(1)));
-                setCredentials(trainee, columns);
+                setCredentials(trainee.getUser(), columns);
                 storage.put(trainee.getUserId(), trainee);
             }
         });

@@ -53,11 +53,11 @@ public class TrainingService {
         if (training.getTrainingDuration() == null || training.getTrainingDuration() <= 0) {
             throw new IllegalArgumentException("Training duration must be greater than 0");
         }
-        if (training.getTraineeId() == null) {
-            throw new IllegalArgumentException("Trainee ID is required");
+        if (training.getTraineeId() == null || training.getTraineeId() <= 0) {
+            throw new IllegalArgumentException("Trainee ID must be positive");
         }
-        if (training.getTrainerId() == null) {
-            throw new IllegalArgumentException("Trainer ID is required");
+        if (training.getTrainerId() == null || training.getTrainerId() <= 0) {
+            throw new IllegalArgumentException("Trainer ID must be positive");
         }
     }
 }

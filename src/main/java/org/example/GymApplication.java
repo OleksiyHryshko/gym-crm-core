@@ -24,7 +24,7 @@ public class GymApplication {
         Trainer newTrainer = new Trainer("Oleksii", "Hryshko", true, "Java Development");
         Trainer savedTrainer = gymFacade.createTrainer(newTrainer);
 
-        logger.info("Created Trainer in Main: Username={}", savedTrainer.getUserName());
+        logger.info("Created Trainer in Main: Username={}"  , savedTrainer.getUser().getUserName());
 
         context.close();
     }

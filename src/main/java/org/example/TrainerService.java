@@ -1,14 +1,14 @@
 package org.example;
 
+import org.example.dao.TraineeDao;
 import org.example.dao.TrainerDao;
 import org.example.model.Trainer;
+import org.example.model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import org.example.dao.TraineeDao;
-import org.example.model.User;
 import java.util.ArrayList;
 import java.util.Optional;
 
@@ -31,11 +31,11 @@ public class TrainerService {
 
     public Trainer createTrainer(Trainer trainer) {
         validateTrainer(trainer, false);
-        logger.info("Creating new Trainer profile for {} {}", trainer.getFirstName(), trainer.getLastName());
+        logger.info("Creating new Trainer profile for {} {}", trainer.getUser().getFirstName(), trainer.getUser().getLastName());
 
-        trainer.setUserName(UserCredentialsGenerator.generateUsername(
-                trainer.getFirstName(), trainer.getLastName(), allUsers()));
-        trainer.setPassword(UserCredentialsGenerator.generatePassword());
+        trainer.getUser().setUserName(UserCredentialsGenerator.generateUsername(
+                trainer.getUser().getFirstName(), trainer.getUser().getLastName(), allUsers()));
+        trainer.getUser().setPassword(UserCredentialsGenerator.generatePassword());
 
         Trainer savedTrainer = trainerDao.save(trainer);
         logger.info("Trainer profile created successfully with ID: {}", savedTrainer.getUserId());
@@ -55,9 +55,10 @@ public class TrainerService {
     }
 
     private ArrayList<User> allUsers() {
-        ArrayList<User> users = new ArrayList<>(trainerDao.findAll());
+        ArrayList<User> users = new ArrayList<>();
+        trainerDao.findAll().forEach(trainer -> users.add(trainer.getUser()));
         if (traineeDao != null) {
-            users.addAll(traineeDao.findAll());
+            traineeDao.findAll().forEach(trainee -> users.add(trainee.getUser()));
         }
         return users;
     }
@@ -71,10 +72,10 @@ public class TrainerService {
         } else if (trainer.getUserId() != null) {
             throw new IllegalArgumentException("New trainer must not have an ID");
         }
-        if (isBlank(trainer.getFirstName()) || isBlank(trainer.getLastName())) {
+        if (trainer.getUser() == null || isBlank(trainer.getUser().getFirstName()) || isBlank(trainer.getUser().getLastName())) {
             throw new IllegalArgumentException("Trainer first name and last name must not be blank");
         }
-        if (trainer.getSpecialization() == null) {
+        if (isBlank(trainer.getSpecialization())) {
             throw new IllegalArgumentException("Trainer specialization is required");
         }
     }

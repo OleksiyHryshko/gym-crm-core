@@ -61,9 +61,10 @@ public class TraineeService {
     }
 
     private ArrayList<User> allUsers() {
-        ArrayList<User> users = new ArrayList<>(traineeDao.findAll());
+        ArrayList<User> users = new ArrayList<>();
+        traineeDao.findAll().forEach(trainee -> users.add(trainee.getUser()));
         if (trainerDao != null) {
-            users.addAll(trainerDao.findAll());
+            trainerDao.findAll().forEach(trainer -> users.add(trainer.getUser()));
         }
         return users;
     }

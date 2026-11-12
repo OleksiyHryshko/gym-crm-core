@@ -1,5 +1,8 @@
 package org.example.dao;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.transaction.Transactional;
 import org.example.model.Trainer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
@@ -10,47 +13,37 @@ import java.util.Map;
 import java.util.Optional;
 
 @Repository
+@Transactional
 public class TrainerDao {
+    @PersistenceContext
+    EntityManager entityManager;
 
-    private final Map<Long, Trainer> storage;
-    private Long idCounter = 1L;
-
-    @Autowired
-    public TrainerDao(Map<Long, Trainer> trainerStorage) {
-        this.storage = trainerStorage;
-    }
     public Trainer save(Trainer trainer) {
-        if (trainer == null) {
+        if(trainer == null) {
             throw new IllegalArgumentException("Trainer must not be null");
         }
-        if (trainer.getUserId() == null) {
-            while (storage.containsKey(idCounter)) {
-                idCounter++;
-            }
-            trainer.setUserId(idCounter++);
-        } else if (storage.containsKey(trainer.getUserId())) {
-            throw new IllegalArgumentException("Trainer with ID " + trainer.getUserId() + " already exists");
-        }
-        storage.put(trainer.getUserId(), trainer);
+        entityManager.persist(trainer);
         return trainer;
     }
 
     public Optional<Trainer> findById(Long id) {
-        return Optional.ofNullable(storage.get(id));
+        return Optional.ofNullable(entityManager.find(Trainer.class, id));
     }
 
     public List<Trainer> findAll() {
-        return new ArrayList<>(storage.values());
+        return entityManager.createQuery("FROM Trainer", Trainer.class).getResultList();
     }
 
     public Trainer update(Trainer trainer) {
-        if (trainer == null || trainer.getUserId() == null) {
-            throw new IllegalArgumentException("Trainer and trainer ID must not be null");
+        if (trainer == null ) {
+            throw new IllegalArgumentException("Trainer must not be null");
         }
-        if (!storage.containsKey(trainer.getUserId())) {
-            throw new IllegalArgumentException("Trainer with ID " + trainer.getUserId() + " does not exist");
+        return entityManager.merge(trainer);
+    }
+    public void delete(Long id) {
+        Trainer trainer = entityManager.find(Trainer.class, id);
+        if (trainer != null) {
+            entityManager.remove(trainer);
         }
-        storage.put(trainer.getUserId(), trainer);
-        return trainer;
     }
 }
