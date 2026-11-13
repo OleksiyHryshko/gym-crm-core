@@ -73,10 +73,16 @@ class TraineeServiceTest {
     }
 
     @Test
-    void deleteTrainee_ShouldDelegateToDao() {
-        traineeService.deleteTrainee(7L);
+    void deleteTraineeByUsername_ShouldFindAndDeleteById() {
+        Trainee trainee = new Trainee();
+        trainee.setUserId(1L);
+        trainee.setUserName("John.Doe");
 
-        verify(traineeDao).delete(7L);
+        when(traineeDao.findAll()).thenReturn(List.of(trainee));
+
+        traineeService.deleteTraineeByUsername("John.Doe");
+
+        verify(traineeDao).delete(1L);
     }
 
     @Test
@@ -86,5 +92,26 @@ class TraineeServiceTest {
         assertEquals(Optional.of(trainee), traineeService.getTraineeById(7L));
 
         verify(traineeDao).findById(7L);
+    }
+    @Test
+    void authenticate_WhenCredentialsMatch_ShouldReturnTrue() {
+        trainee.setUserName("John.Doe");
+        trainee.setPassword("secret123");
+        when(traineeDao.findAll()).thenReturn(List.of(trainee));
+
+        boolean isAuthenticated = traineeService.authenticate("John.Doe", "secret123");
+
+        assertTrue(isAuthenticated);
+    }
+
+    @Test
+    void changePassword_WhenTraineeExists_ShouldUpdatePassword() {
+        trainee.setUserName("John.Doe");
+        when(traineeDao.findAll()).thenReturn(List.of(trainee));
+
+        traineeService.changePassword("John.Doe", "newPassword");
+
+        assertEquals("newPassword", trainee.getPassword());
+        verify(traineeDao).update(trainee);
     }
 }

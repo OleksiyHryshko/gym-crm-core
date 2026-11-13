@@ -110,4 +110,17 @@ class TrainingServiceTest {
         return new Training(1L, 2L, "Strength training",
                 new TrainingType("Strength"), LocalDate.of(2026, 1, 1), 60);
     }
+    @Test
+    void getTraineeTrainings_ShouldCallDaoMethod() {
+        LocalDate date = LocalDate.now();
+        trainingService.getTraineeTrainings("John.Doe", date, date, "TrainerName", "Type");
+        verify(trainingDao).findTrainingsByTraineeUsernameAndCriteria("John.Doe", date, date, "TrainerName", "Type");
+    }
+
+    @Test
+    void getTrainerTrainings_ShouldCallDaoMethod() {
+        LocalDate date = LocalDate.now();
+        trainingService.getTrainerTrainings("Jane.Doe", date, date, "TraineeName");
+        verify(trainingDao).findTrainingsByTrainerUsernameAndCriteria("Jane.Doe", date, date, "TraineeName");
+    }
 }

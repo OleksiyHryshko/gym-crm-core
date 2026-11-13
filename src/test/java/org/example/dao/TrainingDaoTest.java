@@ -1,48 +1,100 @@
 package org.example.dao;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
 import org.example.model.Training;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class TrainingDaoTest {
 
-    private Map<Long, Training> storage;
+    @Mock
+    private EntityManager entityManager;
+
+    @InjectMocks
     private TrainingDao trainingDao;
 
-    @BeforeEach
-    void setUp() {
-        storage = new HashMap<>();
-        trainingDao = new TrainingDao(storage);
+    @Test
+    void save_ShouldCallPersist() {
+        Training training = new Training();
+
+        Training result = trainingDao.save(training);
+
+        verify(entityManager, times(1)).persist(training);
+        assertSame(training, result);
     }
 
     @Test
-    void save_ShouldStoreTrainingAndReturnIt() {
-        Training training = new Training();
-
-        assertSame(training, trainingDao.save(training));
-        assertEquals(1, storage.size());
-        assertSame(training, storage.get(1L));
-        assertEquals(1L, training.getTrainingId());
+    void save_WhenNull_ShouldThrowException() {
+        assertThrows(IllegalArgumentException.class, () -> trainingDao.save(null));
     }
 
     @Test
-    void findById_WhenPresent_ShouldReturnTraining() {
+    void findById_WhenExists_ShouldReturnTraining() {
         Training training = new Training();
-        storage.put(4L, training);
+        when(entityManager.find(Training.class, 1L)).thenReturn(training);
 
-        assertEquals(java.util.Optional.of(training), trainingDao.findById(4L));
+        Optional<Training> found = trainingDao.findById(1L);
+
+        assertTrue(found.isPresent());
+        assertSame(training, found.get());
     }
 
     @Test
     void findAll_ShouldReturnAllTrainings() {
-        storage.put(1L, new Training());
-        storage.put(2L, new Training());
+        @SuppressWarnings("unchecked")
+        TypedQuery<Training> query = mock(TypedQuery.class);
+        when(entityManager.createQuery("FROM Training", Training.class)).thenReturn(query);
+        when(query.getResultList()).thenReturn(List.of(new Training(), new Training()));
 
-        assertEquals(2, trainingDao.findAll().size());
+        List<Training> all = trainingDao.findAll();
+
+        assertEquals(2, all.size());
+    }
+
+    @Test
+    void findTrainingsByTraineeUsernameAndCriteria_ShouldExecuteQuery() {
+        @SuppressWarnings("unchecked")
+        TypedQuery<Training> query = mock(TypedQuery.class);
+        // Мокаємо створення будь-якого HQL запиту для Training
+        when(entityManager.createQuery(anyString(), eq(Training.class))).thenReturn(query);
+        when(query.getResultList()).thenReturn(List.of(new Training()));
+
+        LocalDate fromDate = LocalDate.of(2026, 1, 1);
+        List<Training> result = trainingDao.findTrainingsByTraineeUsernameAndCriteria(
+                "John.Doe", fromDate, null, "Jane", null);
+
+        assertEquals(1, result.size());
+        verify(query).setParameter("username", "John.Doe");
+        verify(query).setParameter("fromDate", fromDate);
+        verify(query).setParameter("trainerName", "Jane");
+    }
+
+    @Test
+    void findTrainingsByTrainerUsernameAndCriteria_ShouldExecuteQuery() {
+        @SuppressWarnings("unchecked")
+        TypedQuery<Training> query = mock(TypedQuery.class);
+        when(entityManager.createQuery(anyString(), eq(Training.class))).thenReturn(query);
+        when(query.getResultList()).thenReturn(List.of(new Training(), new Training()));
+
+        List<Training> result = trainingDao.findTrainingsByTrainerUsernameAndCriteria(
+                "Jane.Doe", null, LocalDate.now(), "John");
+
+        assertEquals(2, result.size());
+        verify(query).setParameter("username", "Jane.Doe");
+        verify(query).setParameter("traineeName", "John");
     }
 }

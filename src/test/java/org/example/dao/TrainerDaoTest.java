@@ -1,43 +1,48 @@
 package org.example.dao;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
 import org.example.model.Trainer;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class TrainerDaoTest {
 
-    private TrainerDao trainerDao;
-    private Map<Long, Trainer> storage;
+    @Mock
+    private EntityManager entityManager;
 
-    @BeforeEach
-    void setUp() {
-        storage = new HashMap<>();
-        trainerDao = new TrainerDao(storage);
+    @InjectMocks
+    private TrainerDao trainerDao;
+
+    @Test
+    void save_ShouldCallPersist() {
+        Trainer trainer = new Trainer("Alice", "Smith", true, "Cardio");
+
+        Trainer result = trainerDao.save(trainer);
+
+        verify(entityManager, times(1)).persist(trainer);
+        assertSame(trainer, result);
     }
 
     @Test
-    void save_ShouldAssignIdAndStoreInMap() {
-        Trainer trainer = new Trainer("Alice", "Smith", true, "Cardio");
-
-        Trainer savedTrainer = trainerDao.save(trainer);
-
-        assertNotNull(savedTrainer.getUserId());
-        assertEquals(1, storage.size());
-        assertEquals(savedTrainer, storage.get(savedTrainer.getUserId()));
+    void save_WhenNull_ShouldThrowException() {
+        assertThrows(IllegalArgumentException.class, () -> trainerDao.save(null));
     }
 
     @Test
     void findById_WhenExists_ShouldReturnTrainer() {
         Trainer trainer = new Trainer("Bob", "Jones", true, "Weights");
-        trainer.setUserId(1L);
-        storage.put(1L, trainer);
+        when(entityManager.find(Trainer.class, 1L)).thenReturn(trainer);
 
         Optional<Trainer> found = trainerDao.findById(1L);
 
@@ -47,8 +52,10 @@ class TrainerDaoTest {
 
     @Test
     void findAll_ShouldReturnAllTrainers() {
-        storage.put(1L, new Trainer("A", "A", true, "1"));
-        storage.put(2L, new Trainer("B", "B", true, "2"));
+        @SuppressWarnings("unchecked")
+        TypedQuery<Trainer> query = mock(TypedQuery.class);
+        when(entityManager.createQuery("FROM Trainer", Trainer.class)).thenReturn(query);
+        when(query.getResultList()).thenReturn(List.of(new Trainer(), new Trainer()));
 
         List<Trainer> all = trainerDao.findAll();
 
@@ -56,24 +63,23 @@ class TrainerDaoTest {
     }
 
     @Test
-    void update_WhenIdDoesNotExist_ShouldThrowException() {
+    void update_ShouldCallMerge() {
         Trainer trainer = new Trainer("A", "A", true, "Cardio");
-        trainer.setUserId(99L);
+        when(entityManager.merge(trainer)).thenReturn(trainer);
 
-        assertThrows(IllegalArgumentException.class, () -> trainerDao.update(trainer));
-        assertFalse(storage.containsKey(99L));
+        Trainer result = trainerDao.update(trainer);
+
+        verify(entityManager, times(1)).merge(trainer);
+        assertSame(trainer, result);
     }
 
     @Test
-    void save_WhenIdAlreadyExists_ShouldThrowException() {
-        Trainer existing = new Trainer("Alice", "Smith", true, "Cardio");
-        existing.setUserId(1L);
-        storage.put(1L, existing);
+    void delete_WhenExists_ShouldCallRemove() {
+        Trainer trainer = new Trainer("A", "A", true, "Cardio");
+        when(entityManager.find(Trainer.class, 1L)).thenReturn(trainer);
 
-        Trainer duplicate = new Trainer("Bob", "Jones", true, "Weights");
-        duplicate.setUserId(1L);
+        trainerDao.delete(1L);
 
-        assertThrows(IllegalArgumentException.class, () -> trainerDao.save(duplicate));
-        assertSame(existing, storage.get(1L));
+        verify(entityManager, times(1)).remove(trainer);
     }
 }

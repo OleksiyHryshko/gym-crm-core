@@ -47,4 +47,9 @@ public class TraineeDao {
             entityManager.remove(trainee);
         }
     }
+    public void deleteByUsername(String username) {
+        entityManager.createQuery("DELETE FROM Trainee t WHERE t.user.userName = :username")
+                .setParameter("username", username)
+                .executeUpdate();
+    }
 }
