@@ -6,15 +6,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 @Service
+@Transactional
 public class TrainingService {
 
     private static final Logger logger = LoggerFactory.getLogger(TrainingService.class);
     private TrainingDao trainingDao;
-
 
     @Autowired
     public void setTrainingDao(TrainingDao trainingDao) {
@@ -37,6 +40,16 @@ public class TrainingService {
         return trainingDao.findById(id);
     }
 
+    public List<Training> getTraineeTrainings(String username, LocalDate fromDate, LocalDate toDate, String trainerName, String trainingTypeName) {
+        logger.info("Fetching trainings for Trainee: {} with criteria", username);
+        return trainingDao.findTrainingsByTraineeUsernameAndCriteria(username, fromDate, toDate, trainerName, trainingTypeName);
+    }
+
+    public List<Training> getTrainerTrainings(String username, LocalDate fromDate, LocalDate toDate, String traineeName) {
+        logger.info("Fetching trainings for Trainer: {} with criteria", username);
+        return trainingDao.findTrainingsByTrainerUsernameAndCriteria(username, fromDate, toDate, traineeName);
+    }
+
     private void validateTraining(Training training) {
         if (training == null) {
             throw new IllegalArgumentException("Training must not be null");
@@ -53,11 +66,11 @@ public class TrainingService {
         if (training.getTrainingDuration() == null || training.getTrainingDuration() <= 0) {
             throw new IllegalArgumentException("Training duration must be greater than 0");
         }
-        if (training.getTraineeId() == null || training.getTraineeId() <= 0) {
-            throw new IllegalArgumentException("Trainee ID must be positive");
+        if (training.getTrainee() == null) {
+            throw new IllegalArgumentException("Trainee association is required");
         }
-        if (training.getTrainerId() == null || training.getTrainerId() <= 0) {
-            throw new IllegalArgumentException("Trainer ID must be positive");
+        if (training.getTrainer() == null) {
+            throw new IllegalArgumentException("Trainer association is required");
         }
     }
 }

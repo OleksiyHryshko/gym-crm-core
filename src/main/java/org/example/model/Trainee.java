@@ -16,6 +16,16 @@ public class Trainee  {
     private User user;
     private LocalDate dateOfBirth;
     private String address;
+    @OneToMany(mappedBy = "trainee", cascade = CascadeType.REMOVE)
+    private List<Training> trainings;
+
+    public List<Training> getTrainings() {
+        return trainings;
+    }
+
+    public void setTrainings(List<Training> trainings) {
+        this.trainings = trainings;
+    }
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
             name = "trainee_trainer",
