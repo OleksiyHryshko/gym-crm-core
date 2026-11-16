@@ -1,31 +1,45 @@
-package org.example.model;
+package org.example.entity;
 
 import jakarta.persistence.*;
 
 @Entity
 @Table(name = "users")
-public  class User {
+public class UserEntity {
+
     @Id
-    @GeneratedValue(strategy= GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(length = 50, nullable = false)
+
+    @Column(name = "first_name", length = 50, nullable = false)
     private String firstName;
-    @Column(length = 50, nullable = false)
+
+    @Column(name = "last_name", length = 50, nullable = false)
     private String lastName;
-    @Column(length = 50, nullable = false)
+
+    @Column(name = "user_name", length = 50, nullable = false, unique = true)
     private String userName;
-    @Column(nullable = false)
+
+    @Column(name = "password", nullable = false)
     private String password;
-    @Column(nullable = false)
+
+    @Column(name = "is_active", nullable = false)
     private boolean isActive;
 
-    public User() {
+    public UserEntity() {
     }
 
-    public User(String firstName, String lastName, boolean isActive) {
+    public UserEntity(String firstName, String lastName, boolean isActive) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.isActive = isActive;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getFirstName() {
@@ -35,11 +49,6 @@ public  class User {
     public void setFirstName(String firstName) {
         this.firstName = firstName;
     }
-
-    public Long getId() {
-        return id;
-    }
-
 
     public String getLastName() {
         return lastName;

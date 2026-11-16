@@ -1,10 +1,10 @@
-package org.example;
+package org.example.service;
 
+import org.example.UserCredentialsGenerator;
 import org.example.dao.TraineeDao;
 import org.example.dao.TrainerDao;
 import org.example.model.Trainee;
 import org.example.model.Trainer;
-import org.example.model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +17,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
-@Transactional // Важливо для управління транзакціями
+@Transactional
 public class TraineeService {
 
     private static final Logger logger = LoggerFactory.getLogger(TraineeService.class);
@@ -39,9 +39,9 @@ public class TraineeService {
         logger.info("Creating new Trainee profile for {} {}", trainee.getFirstName(), trainee.getLastName());
 
         trainee.setUserName(UserCredentialsGenerator.generateUsername(
-                trainee.getFirstName(), trainee.getLastName(), allUsers()));
+                trainee.getFirstName(), trainee.getLastName(), allUsernames()));
         trainee.setPassword(UserCredentialsGenerator.generatePassword());
-        trainee.setActive(true); // За замовчуванням активний
+        trainee.setActive(true);
 
         Trainee savedTrainee = traineeDao.save(trainee);
         logger.info("Trainee profile created successfully with username: {}", savedTrainee.getUserName());
@@ -50,28 +50,41 @@ public class TraineeService {
 
     public Trainee updateTrainee(Trainee trainee) {
         validateTrainee(trainee, true);
-        logger.info("Updating Trainee profile: {}", trainee.getUserName());
-        return traineeDao.update(trainee);
+
+        Trainee existing = findByUsername(trainee.getUserName())
+                .orElseThrow(() -> new IllegalArgumentException("Trainee not found: " + trainee.getUserName()));
+
+        existing.setFirstName(trainee.getFirstName());
+        existing.setLastName(trainee.getLastName());
+        existing.setDateOfBirth(trainee.getDateOfBirth());
+        existing.setAddress(trainee.getAddress());
+        existing.setActive(trainee.isActive());
+
+        logger.info("Updating Trainee profile: {}", existing.getUserName());
+        return traineeDao.update(existing);
     }
 
     public void deleteTraineeByUsername(String username) {
         logger.info("Deleting Trainee profile with username: {}", username);
-        findByUsername(username).ifPresent(trainee -> traineeDao.delete(trainee.getId()));
+        Trainee trainee = findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("Trainee not found: " + username));
+        traineeDao.delete(trainee.getId());
     }
 
+    @Transactional(readOnly = true)
     public Optional<Trainee> getTraineeById(Long id) {
         validateId(id, "Trainee ID");
         logger.info("Fetching Trainee profile with ID: {}", id);
         return traineeDao.findById(id);
     }
 
+    @Transactional(readOnly = true)
     public Optional<Trainee> findByUsername(String username) {
         logger.info("Fetching Trainee by username: {}", username);
-        return traineeDao.findAll().stream()
-                .filter(t -> t.getUserName().equals(username))
-                .findFirst();
+        return traineeDao.findByUsername(username);
     }
 
+    @Transactional(readOnly = true)
     public boolean authenticate(String username, String password) {
         logger.info("Authenticating Trainee: {}", username);
         return findByUsername(username)
@@ -80,9 +93,12 @@ public class TraineeService {
     }
 
     public void changePassword(String username, String newPassword) {
+        if (isBlank(newPassword)) {
+            throw new IllegalArgumentException("New password must not be blank");
+        }
         logger.info("Changing password for Trainee: {}", username);
         Trainee trainee = findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("Trainee not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Trainee not found: " + username));
         trainee.setPassword(newPassword);
         traineeDao.update(trainee);
     }
@@ -90,31 +106,37 @@ public class TraineeService {
     public void toggleActivation(String username, boolean isActive) {
         logger.info("Setting activation status to {} for Trainee: {}", isActive, username);
         Trainee trainee = findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("Trainee not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Trainee not found: " + username));
+        if (trainee.isActive() == isActive) {
+            throw new IllegalStateException("Trainee is already " + (isActive ? "active" : "inactive"));
+        }
         trainee.setActive(isActive);
         traineeDao.update(trainee);
     }
 
+    @Transactional(readOnly = true)
     public List<Trainer> getUnassignedTrainers(String traineeUsername) {
         logger.info("Fetching unassigned trainers for Trainee: {}", traineeUsername);
         Trainee trainee = findByUsername(traineeUsername)
-                .orElseThrow(() -> new IllegalArgumentException("Trainee not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Trainee not found: " + traineeUsername));
 
-        List<Trainer> allTrainers = trainerDao.findAll();
-        List<Trainer> assignedTrainers = trainee.getTrainers();
+        List<String> assignedUsernames = trainee.getTrainers() == null
+                ? List.of()
+                : trainee.getTrainers().stream().map(Trainer::getUserName).toList();
 
-        return allTrainers.stream()
-                .filter(trainer -> assignedTrainers == null || !assignedTrainers.contains(trainer))
+        return trainerDao.findAll().stream()
+                .filter(Trainer::isActive)
+                .filter(trainer -> !assignedUsernames.contains(trainer.getUserName()))
                 .collect(Collectors.toList());
     }
 
     public List<Trainer> updateTrainersList(String traineeUsername, List<String> trainerUsernames) {
         logger.info("Updating trainers list for Trainee: {}", traineeUsername);
         Trainee trainee = findByUsername(traineeUsername)
-                .orElseThrow(() -> new IllegalArgumentException("Trainee not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Trainee not found: " + traineeUsername));
 
         List<Trainer> newTrainers = trainerDao.findAll().stream()
-                .filter(t -> trainerUsernames.contains(t.getFirstName())) // або t.getUserName()
+                .filter(t -> trainerUsernames.contains(t.getUserName()))
                 .collect(Collectors.toList());
 
         trainee.setTrainers(newTrainers);
@@ -122,18 +144,24 @@ public class TraineeService {
         return newTrainers;
     }
 
-    private ArrayList<User> allUsers() {
-        ArrayList<User> users = new ArrayList<>();
-        traineeDao.findAll().forEach(trainee -> users.add(trainee.getUser()));
+    private List<String> allUsernames() {
+        List<String> usernames = new ArrayList<>();
+        traineeDao.findAll().forEach(trainee -> usernames.add(trainee.getUserName()));
         if (trainerDao != null) {
-            trainerDao.findAll().forEach(trainer -> users.add(trainer.getUser()));
+            trainerDao.findAll().forEach(trainer -> usernames.add(trainer.getUserName()));
         }
-        return users;
+        return usernames;
     }
 
     private void validateTrainee(Trainee trainee, boolean update) {
         if (trainee == null) {
             throw new IllegalArgumentException("Trainee must not be null");
+        }
+        if (!update && trainee.getId() != null) {
+            throw new IllegalArgumentException("New trainee must not have an ID");
+        }
+        if (update && isBlank(trainee.getUserName())) {
+            throw new IllegalArgumentException("Trainee username is required for update");
         }
         if (isBlank(trainee.getFirstName()) || isBlank(trainee.getLastName())) {
             throw new IllegalArgumentException("Trainee first name and last name must not be blank");

@@ -21,10 +21,15 @@ public class GymApplication {
 
         GymFacade gymFacade = context.getBean(GymFacade.class);
 
-        Trainer newTrainer = new Trainer("Oleksii", "Hryshko", true, "Java Development");
+        Trainer newTrainer = new Trainer();
+        newTrainer.setFirstName("Oleksii");
+        newTrainer.setLastName("Hryshko");
+        newTrainer.setActive(true);
+        newTrainer.setSpecialization("Java Development");
+
         Trainer savedTrainer = gymFacade.createTrainer(newTrainer);
 
-        logger.info("Created Trainer in Main: Username={}"  , savedTrainer.getUser().getUserName());
+        logger.info("Created Trainer in Main: Username={}", savedTrainer.getUserName());
 
         context.close();
     }

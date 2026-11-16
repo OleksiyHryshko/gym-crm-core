@@ -1,103 +1,42 @@
 package org.example.model;
 
-import jakarta.persistence.*;
-
+import java.util.ArrayList;
 import java.util.List;
 
-@Entity
-@Table(name=  "trainers")
-public class Trainer  {
-    @Id
-    @GeneratedValue(strategy= GenerationType.AUTO)
+public class Trainer {
     private Long id;
+    private String firstName;
+    private String lastName;
+    private String userName;
+    private String password;
+    private boolean isActive;
     private String specialization;
-    @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "user_id")
-    private User user;
-    @ManyToMany(mappedBy = "trainers")
-    private List<Trainee> trainees;
+    private List<Trainee> trainees = new ArrayList<>();
 
     public Trainer() {
-        super();
     }
 
-    public Trainer(String firstName, String lastName, boolean isActive, String specialization) {
-        this.user = new User(firstName, lastName, isActive);
-        this.specialization = specialization;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+
+    public String getUserName() { return userName; }
+    public void setUserName(String userName) { this.userName = userName; }
+
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
+
+    public boolean isActive() { return isActive; }
+    public void setActive(boolean active) { isActive = active; }
 
     public String getSpecialization() { return specialization; }
     public void setSpecialization(String specialization) { this.specialization = specialization; }
 
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
-
-    public Long getUserId() { return id; }
-
-    public void setUserId(Long id) {
-        this.id = id;
-    }
-
-    public String getFirstName() {
-        return user == null ? null : user.getFirstName();
-    }
-
-    public void setFirstName(String firstName) {
-        requireUser().setFirstName(firstName);
-    }
-
-    public String getLastName() {
-        return user == null ? null : user.getLastName();
-    }
-
-    public void setLastName(String lastName) {
-        requireUser().setLastName(lastName);
-    }
-
-    public String getUserName() {
-        return user == null ? null : user.getUserName();
-    }
-
-    public void setUserName(String userName) {
-        requireUser().setUserName(userName);
-    }
-
-    public String getPassword() {
-        return user == null ? null : user.getPassword();
-    }
-
-    public void setPassword(String password) {
-        requireUser().setPassword(password);
-    }
-
-    public boolean isActive() {
-        return user != null && user.isActive();
-    }
-
-    public void setActive(boolean active) {
-        requireUser().setActive(active);
-    }
-
-    public List<Trainee> getTrainees() {
-        return trainees;
-    }
-
-    public void setTrainees(List<Trainee> trainees) {
-        this.trainees = trainees;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    private User requireUser() {
-        if (user == null) {
-            user = new User();
-        }
-        return user;
-    }
+    public List<Trainee> getTrainees() { return trainees; }
+    public void setTrainees(List<Trainee> trainees) { this.trainees = trainees; }
 }

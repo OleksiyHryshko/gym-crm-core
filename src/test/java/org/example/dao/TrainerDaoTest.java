@@ -2,6 +2,8 @@ package org.example.dao;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
+import org.example.entity.TrainerEntity;
+import org.example.entity.UserEntity;
 import org.example.model.Trainer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,6 +15,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -25,13 +28,21 @@ class TrainerDaoTest {
     private TrainerDao trainerDao;
 
     @Test
-    void save_ShouldCallPersist() {
-        Trainer trainer = new Trainer("Alice", "Smith", true, "Cardio");
+    void save_ShouldCallPersistAndReturnDomainModel() {
+        Trainer trainer = new Trainer();
+        trainer.setFirstName("Alice");
+        trainer.setLastName("Smith");
+        trainer.setUserName("Alice.Smith");
+        trainer.setPassword("secret1234");
+        trainer.setActive(true);
+        trainer.setSpecialization("Cardio");
 
         Trainer result = trainerDao.save(trainer);
 
-        verify(entityManager, times(1)).persist(trainer);
-        assertSame(trainer, result);
+        verify(entityManager, times(1)).persist(any(TrainerEntity.class));
+        assertNotNull(result);
+        assertEquals("Alice", result.getFirstName());
+        assertEquals("Cardio", result.getSpecialization());
     }
 
     @Test
@@ -41,21 +52,27 @@ class TrainerDaoTest {
 
     @Test
     void findById_WhenExists_ShouldReturnTrainer() {
-        Trainer trainer = new Trainer("Bob", "Jones", true, "Weights");
-        when(entityManager.find(Trainer.class, 1L)).thenReturn(trainer);
+        UserEntity user = new UserEntity("Bob", "Jones", true);
+        TrainerEntity entity = new TrainerEntity();
+        entity.setId(1L);
+        entity.setUser(user);
+        entity.setSpecialization("Weights");
+
+        when(entityManager.find(TrainerEntity.class, 1L)).thenReturn(entity);
 
         Optional<Trainer> found = trainerDao.findById(1L);
 
         assertTrue(found.isPresent());
         assertEquals("Bob", found.get().getFirstName());
+        assertEquals("Weights", found.get().getSpecialization());
     }
 
     @Test
     void findAll_ShouldReturnAllTrainers() {
         @SuppressWarnings("unchecked")
-        TypedQuery<Trainer> query = mock(TypedQuery.class);
-        when(entityManager.createQuery("FROM Trainer", Trainer.class)).thenReturn(query);
-        when(query.getResultList()).thenReturn(List.of(new Trainer(), new Trainer()));
+        TypedQuery<TrainerEntity> query = mock(TypedQuery.class);
+        when(entityManager.createQuery("FROM TrainerEntity", TrainerEntity.class)).thenReturn(query);
+        when(query.getResultList()).thenReturn(List.of(new TrainerEntity(), new TrainerEntity()));
 
         List<Trainer> all = trainerDao.findAll();
 
@@ -63,23 +80,38 @@ class TrainerDaoTest {
     }
 
     @Test
-    void update_ShouldCallMerge() {
-        Trainer trainer = new Trainer("A", "A", true, "Cardio");
-        when(entityManager.merge(trainer)).thenReturn(trainer);
+    void update_ShouldUpdateManagedEntityAndCallMerge() {
+        UserEntity user = new UserEntity("A", "A", true);
+        TrainerEntity managed = new TrainerEntity();
+        managed.setId(1L);
+        managed.setUser(user);
+        managed.setSpecialization("Cardio");
 
-        Trainer result = trainerDao.update(trainer);
+        Trainer updateRequest = new Trainer();
+        updateRequest.setId(1L);
+        updateRequest.setFirstName("Updated");
+        updateRequest.setLastName("Trainer");
+        updateRequest.setUserName("Updated.Trainer");
+        updateRequest.setPassword("pass123456");
+        updateRequest.setActive(true);
+        updateRequest.setSpecialization("Cardio");
 
-        verify(entityManager, times(1)).merge(trainer);
-        assertSame(trainer, result);
+        when(entityManager.find(TrainerEntity.class, 1L)).thenReturn(managed);
+        when(entityManager.merge(managed)).thenReturn(managed);
+
+        Trainer result = trainerDao.update(updateRequest);
+
+        verify(entityManager, times(1)).merge(managed);
+        assertEquals("Updated", result.getFirstName());
     }
 
     @Test
     void delete_WhenExists_ShouldCallRemove() {
-        Trainer trainer = new Trainer("A", "A", true, "Cardio");
-        when(entityManager.find(Trainer.class, 1L)).thenReturn(trainer);
+        TrainerEntity trainerEntity = new TrainerEntity();
+        when(entityManager.find(TrainerEntity.class, 1L)).thenReturn(trainerEntity);
 
         trainerDao.delete(1L);
 
-        verify(entityManager, times(1)).remove(trainer);
+        verify(entityManager, times(1)).remove(trainerEntity);
     }
 }
