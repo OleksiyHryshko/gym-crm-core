@@ -4,11 +4,12 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "trainings")
+@Table(name = "trainings", schema = "public")
 public class TrainingEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @SequenceGenerator(name = "trainingsSequence", sequenceName = "trainings_seq", allocationSize = 50)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "trainingsSequence")
     private Long id;
 
     @ManyToOne(optional = false)
@@ -23,13 +24,13 @@ public class TrainingEntity {
     @JoinColumn(name = "training_type_id", nullable = false)
     private TrainingTypeEntity trainingType;
 
-    @Column(name = "training_name", nullable = false)
+    @Column(name = "trainingname", nullable = false)
     private String trainingName;
 
-    @Column(name = "training_date", nullable = false)
+    @Column(name = "trainingdate", nullable = false)
     private LocalDate trainingDate;
 
-    @Column(name = "training_duration", nullable = false)
+    @Column(name = "trainingduration", nullable = false)
     private Integer trainingDuration;
 
     public TrainingEntity() {

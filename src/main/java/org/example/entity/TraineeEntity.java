@@ -6,18 +6,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "trainees")
+@Table(name = "trainees", schema = "public")
 public class TraineeEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @SequenceGenerator(name = "traineesSequence", sequenceName = "trainees_seq", allocationSize = 50)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "traineesSequence")
     private Long id;
 
     @OneToOne(cascade = CascadeType.ALL, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private UserEntity user;
 
-    @Column(name = "date_of_birth")
+    @Column(name = "dateofbirth")
     private LocalDate dateOfBirth;
 
     @Column(name = "address")
@@ -29,8 +30,9 @@ public class TraineeEntity {
     @ManyToMany
     @JoinTable(
             name = "trainee_trainer",
-            joinColumns = @JoinColumn(name = "trainee_id"),
-            inverseJoinColumns = @JoinColumn(name = "trainer_id")
+            schema = "public",
+            joinColumns = @JoinColumn(name = "trainee_id", nullable = false),
+            inverseJoinColumns = @JoinColumn(name = "trainer_id", nullable = false)
     )
     private List<TrainerEntity> trainers = new ArrayList<>();
 

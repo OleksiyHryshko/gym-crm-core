@@ -3,14 +3,15 @@ package org.example.entity;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "training_types")
+@Table(name = "training_types", schema = "public")
 public class TrainingTypeEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @SequenceGenerator(name = "trainingTypesSequence", sequenceName = "training_types_seq", allocationSize = 50)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "trainingTypesSequence")
     private Long id;
 
-    @Column(name = "training_type_name", nullable = false, unique = true)
+    @Column(name = "trainingtypename", nullable = false, unique = true)
     private String trainingTypeName;
 
     public TrainingTypeEntity() {

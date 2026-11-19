@@ -5,18 +5,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "trainers")
+@Table(name = "trainers", schema = "public")
 public class TrainerEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @SequenceGenerator(name = "trainersSequence", sequenceName = "trainers_seq", allocationSize = 50)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "trainersSequence")
     private Long id;
 
     @Column(name = "specialization", nullable = false)
     private String specialization;
 
     @OneToOne(cascade = CascadeType.ALL, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private UserEntity user;
 
     @ManyToMany(mappedBy = "trainers")
