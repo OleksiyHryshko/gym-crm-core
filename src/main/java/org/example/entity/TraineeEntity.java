@@ -14,7 +14,7 @@ public class TraineeEntity {
     private Long id;
 
     @OneToOne(cascade = CascadeType.ALL, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private UserEntity user;
 
     @Column(name = "date_of_birth")

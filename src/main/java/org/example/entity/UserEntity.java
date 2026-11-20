@@ -10,19 +10,19 @@ public class UserEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "first_name", length = 50, nullable = false)
+    @Column(name = "firstname", length = 50, nullable = false)
     private String firstName;
 
-    @Column(name = "last_name", length = 50, nullable = false)
+    @Column(name = "lastname", length = 50, nullable = false)
     private String lastName;
 
-    @Column(name = "user_name", length = 50, nullable = false, unique = true)
+    @Column(name = "username", length = 50, nullable = false, unique = true)
     private String userName;
 
     @Column(name = "password", nullable = false)
     private String password;
 
-    @Column(name = "is_active", nullable = false)
+    @Column(name = "isactive", nullable = false)
     private boolean isActive;
 
     public UserEntity() {

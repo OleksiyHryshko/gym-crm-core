@@ -6,8 +6,6 @@ import org.example.entity.TraineeEntity;
 import org.example.entity.TrainerEntity;
 import org.example.entity.TrainingEntity;
 import org.example.entity.TrainingTypeEntity;
-import org.example.model.Training;
-import org.example.model.TrainingType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -20,7 +18,6 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -35,37 +32,18 @@ class TrainingDaoTest {
     private TrainingDao trainingDao;
 
     @Test
-    void save_ShouldResolveEntitiesAndCallPersist() {
-        @SuppressWarnings("unchecked")
-        TypedQuery<TraineeEntity> traineeQuery = mock(TypedQuery.class);
-        @SuppressWarnings("unchecked")
-        TypedQuery<TrainerEntity> trainerQuery = mock(TypedQuery.class);
-        @SuppressWarnings("unchecked")
-        TypedQuery<TrainingTypeEntity> typeQuery = mock(TypedQuery.class);
-
-        when(entityManager.createQuery(anyString(), eq(TraineeEntity.class))).thenReturn(traineeQuery);
-        when(traineeQuery.setParameter("username", "John.Doe")).thenReturn(traineeQuery);
-        when(traineeQuery.getResultStream()).thenReturn(Stream.of(new TraineeEntity()));
-
-        when(entityManager.createQuery(anyString(), eq(TrainerEntity.class))).thenReturn(trainerQuery);
-        when(trainerQuery.setParameter("username", "Jane.Smith")).thenReturn(trainerQuery);
-        when(trainerQuery.getResultStream()).thenReturn(Stream.of(new TrainerEntity()));
-
-        when(entityManager.createQuery(anyString(), eq(TrainingTypeEntity.class))).thenReturn(typeQuery);
-        when(typeQuery.setParameter("name", "Cardio")).thenReturn(typeQuery);
-        when(typeQuery.getResultStream()).thenReturn(Stream.of(new TrainingTypeEntity("Cardio")));
-
-        Training training = new Training();
-        training.setTraineeUsername("John.Doe");
-        training.setTrainerUsername("Jane.Smith");
+    void save_ShouldCallPersistAndReturnEntity() {
+        TrainingEntity training = new TrainingEntity();
+        training.setTrainee(new TraineeEntity());
+        training.setTrainer(new TrainerEntity());
+        training.setTrainingType(new TrainingTypeEntity("Cardio"));
         training.setTrainingName("Morning Run");
-        training.setTrainingType(new TrainingType(1L, "Cardio"));
         training.setTrainingDate(LocalDate.of(2026, 1, 1));
         training.setTrainingDuration(45);
 
-        Training result = trainingDao.save(training);
+        TrainingEntity result = trainingDao.save(training);
 
-        verify(entityManager, times(1)).persist(any(TrainingEntity.class));
+        verify(entityManager, times(1)).persist(training);
         assertNotNull(result);
         assertEquals("Morning Run", result.getTrainingName());
     }
@@ -76,29 +54,45 @@ class TrainingDaoTest {
     }
 
     @Test
-    void findById_WhenExists_ShouldReturnTraining() {
+    void findById_WhenExists_ShouldReturnTrainingEntity() {
         TrainingEntity trainingEntity = new TrainingEntity();
         trainingEntity.setId(1L);
         trainingEntity.setTrainingName("HIIT");
 
         when(entityManager.find(TrainingEntity.class, 1L)).thenReturn(trainingEntity);
 
-        Optional<Training> found = trainingDao.findById(1L);
+        Optional<TrainingEntity> found = trainingDao.findById(1L);
 
         assertTrue(found.isPresent());
         assertEquals("HIIT", found.get().getTrainingName());
     }
 
     @Test
-    void findAll_ShouldReturnAllTrainings() {
+    void findAll_ShouldReturnAllTrainingEntities() {
         @SuppressWarnings("unchecked")
         TypedQuery<TrainingEntity> query = mock(TypedQuery.class);
         when(entityManager.createQuery("FROM TrainingEntity", TrainingEntity.class)).thenReturn(query);
         when(query.getResultList()).thenReturn(List.of(new TrainingEntity(), new TrainingEntity()));
 
-        List<Training> all = trainingDao.findAll();
+        List<TrainingEntity> all = trainingDao.findAll();
 
         assertEquals(2, all.size());
+    }
+
+    @Test
+    void findTrainingTypeByName_WhenExists_ShouldReturnOptionalEntity() {
+        @SuppressWarnings("unchecked")
+        TypedQuery<TrainingTypeEntity> query = mock(TypedQuery.class);
+        TrainingTypeEntity typeEntity = new TrainingTypeEntity("Cardio");
+
+        when(entityManager.createQuery(anyString(), eq(TrainingTypeEntity.class))).thenReturn(query);
+        when(query.setParameter("name", "Cardio")).thenReturn(query);
+        when(query.getResultStream()).thenReturn(Stream.of(typeEntity));
+
+        Optional<TrainingTypeEntity> result = trainingDao.findTrainingTypeByName("Cardio");
+
+        assertTrue(result.isPresent());
+        assertEquals("Cardio", result.get().getTrainingTypeName());
     }
 
     @Test
@@ -109,7 +103,7 @@ class TrainingDaoTest {
         when(query.getResultList()).thenReturn(List.of(new TrainingEntity()));
 
         LocalDate fromDate = LocalDate.of(2026, 1, 1);
-        List<Training> result = trainingDao.findTrainingsByTraineeUsernameAndCriteria(
+        List<TrainingEntity> result = trainingDao.findTrainingsByTraineeUsernameAndCriteria(
                 "John.Doe", fromDate, null, "Jane", null);
 
         assertEquals(1, result.size());
@@ -125,7 +119,7 @@ class TrainingDaoTest {
         when(entityManager.createQuery(anyString(), eq(TrainingEntity.class))).thenReturn(query);
         when(query.getResultList()).thenReturn(List.of(new TrainingEntity(), new TrainingEntity()));
 
-        List<Training> result = trainingDao.findTrainingsByTrainerUsernameAndCriteria(
+        List<TrainingEntity> result = trainingDao.findTrainingsByTrainerUsernameAndCriteria(
                 "Jane.Doe", null, LocalDate.now(), "John");
 
         assertEquals(2, result.size());

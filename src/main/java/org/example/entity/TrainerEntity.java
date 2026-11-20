@@ -16,7 +16,7 @@ public class TrainerEntity {
     private String specialization;
 
     @OneToOne(cascade = CascadeType.ALL, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private UserEntity user;
 
     @ManyToMany(mappedBy = "trainers")

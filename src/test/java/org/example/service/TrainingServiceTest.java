@@ -3,8 +3,7 @@ package org.example.service;
 import org.example.dao.TraineeDao;
 import org.example.dao.TrainerDao;
 import org.example.dao.TrainingDao;
-import org.example.model.Trainee;
-import org.example.model.Trainer;
+import org.example.entity.*;
 import org.example.model.Training;
 import org.example.model.TrainingType;
 import org.junit.jupiter.api.Test;
@@ -36,15 +35,39 @@ class TrainingServiceTest {
     private TrainingService trainingService;
 
     @Test
-    void createTraining_WhenTraineeAndTrainerExist_ShouldDelegateToDao() {
+    void createTraining_WhenTraineeAndTrainerExist_ShouldAssembleEntityAndSave() {
         Training training = validTraining();
-        when(traineeDao.findByUsername("John.Doe")).thenReturn(Optional.of(new Trainee()));
-        when(trainerDao.findByUsername("Jane.Smith")).thenReturn(Optional.of(new Trainer()));
-        when(trainingDao.save(training)).thenReturn(training);
 
-        assertSame(training, trainingService.createTraining(training));
+        UserEntity traineeUser = new UserEntity("John", "Doe", true);
+        traineeUser.setUserName("John.Doe");
+        TraineeEntity traineeEntity = new TraineeEntity();
+        traineeEntity.setUser(traineeUser);
 
-        verify(trainingDao).save(training);
+        UserEntity trainerUser = new UserEntity("Jane", "Smith", true);
+        trainerUser.setUserName("Jane.Smith");
+        TrainerEntity trainerEntity = new TrainerEntity();
+        trainerEntity.setUser(trainerUser);
+        trainerEntity.setSpecialization("Strength");
+
+        TrainingTypeEntity typeEntity = new TrainingTypeEntity("Strength");
+        typeEntity.setId(1L);
+
+        when(traineeDao.findByUsername("John.Doe")).thenReturn(Optional.of(traineeEntity));
+        when(trainerDao.findByUsername("Jane.Smith")).thenReturn(Optional.of(trainerEntity));
+        when(trainingDao.findTrainingTypeByName("Strength")).thenReturn(Optional.of(typeEntity));
+        when(trainingDao.save(any(TrainingEntity.class))).thenAnswer(invocation -> {
+            TrainingEntity saved = invocation.getArgument(0);
+            saved.setId(10L);
+            return saved;
+        });
+
+        Training result = trainingService.createTraining(training);
+
+        assertEquals(10L, result.getId());
+        assertEquals("John.Doe", result.getTraineeUsername());
+        assertEquals("Jane.Smith", result.getTrainerUsername());
+        assertEquals("Strength training", result.getTrainingName());
+        verify(trainingDao).save(any(TrainingEntity.class));
     }
 
     @Test
@@ -59,7 +82,7 @@ class TrainingServiceTest {
     @Test
     void createTraining_WhenTrainerDoesNotExist_ShouldThrowException() {
         Training training = validTraining();
-        when(traineeDao.findByUsername("John.Doe")).thenReturn(Optional.of(new Trainee()));
+        when(traineeDao.findByUsername("John.Doe")).thenReturn(Optional.of(new TraineeEntity()));
         when(trainerDao.findByUsername("Jane.Smith")).thenReturn(Optional.empty());
 
         assertThrows(IllegalArgumentException.class, () -> trainingService.createTraining(training));
@@ -67,13 +90,17 @@ class TrainingServiceTest {
     }
 
     @Test
-    void getTrainingById_ShouldReturnDaoResult() {
-        Training training = new Training();
-        when(trainingDao.findById(1L)).thenReturn(Optional.of(training));
+    void getTrainingById_ShouldReturnMappedDomain() {
+        TrainingEntity entity = new TrainingEntity();
+        entity.setId(1L);
+        entity.setTrainingName("Strength training");
+        when(trainingDao.findById(1L)).thenReturn(Optional.of(entity));
 
-        assertEquals(Optional.of(training), trainingService.getTrainingById(1L));
+        Optional<Training> result = trainingService.getTrainingById(1L);
 
-        verify(trainingDao).findById(1L);
+        assertTrue(result.isPresent());
+        assertEquals(1L, result.get().getId());
+        assertEquals("Strength training", result.get().getTrainingName());
     }
 
     @Test

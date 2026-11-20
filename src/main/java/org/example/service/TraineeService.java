@@ -3,6 +3,9 @@ package org.example.service;
 import org.example.UserCredentialsGenerator;
 import org.example.dao.TraineeDao;
 import org.example.dao.TrainerDao;
+import org.example.entity.TraineeEntity;
+import org.example.entity.TrainerEntity;
+import org.example.entity.UserEntity;
 import org.example.model.Trainee;
 import org.example.model.Trainer;
 import org.slf4j.Logger;
@@ -14,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -38,57 +40,74 @@ public class TraineeService {
         validateTrainee(trainee, false);
         logger.info("Creating new Trainee profile for {} {}", trainee.getFirstName(), trainee.getLastName());
 
-        trainee.setUserName(UserCredentialsGenerator.generateUsername(
-                trainee.getFirstName(), trainee.getLastName(), allUsernames()));
-        trainee.setPassword(UserCredentialsGenerator.generatePassword());
-        trainee.setActive(true);
+        String username = UserCredentialsGenerator.generateUsername(
+                trainee.getFirstName(), trainee.getLastName(), allUsernames());
+        String password = UserCredentialsGenerator.generatePassword();
 
-        Trainee savedTrainee = traineeDao.save(trainee);
-        logger.info("Trainee profile created successfully with username: {}", savedTrainee.getUserName());
-        return savedTrainee;
+        UserEntity userEntity = new UserEntity();
+        userEntity.setFirstName(trainee.getFirstName());
+        userEntity.setLastName(trainee.getLastName());
+        userEntity.setUserName(username);
+        userEntity.setPassword(password);
+        userEntity.setActive(true);
+
+        TraineeEntity entity = new TraineeEntity();
+        entity.setUser(userEntity);
+        entity.setDateOfBirth(trainee.getDateOfBirth());
+        entity.setAddress(trainee.getAddress());
+
+        TraineeEntity savedEntity = traineeDao.save(entity);
+        logger.info("Trainee profile created successfully with username: {}", username);
+        return toDomain(savedEntity);
     }
 
     public Trainee updateTrainee(Trainee trainee) {
         validateTrainee(trainee, true);
 
-        Trainee existing = findByUsername(trainee.getUserName())
+        TraineeEntity managed = traineeDao.findByUsername(trainee.getUserName())
                 .orElseThrow(() -> new IllegalArgumentException("Trainee not found: " + trainee.getUserName()));
 
-        existing.setFirstName(trainee.getFirstName());
-        existing.setLastName(trainee.getLastName());
-        existing.setDateOfBirth(trainee.getDateOfBirth());
-        existing.setAddress(trainee.getAddress());
-        existing.setActive(trainee.isActive());
+        managed.getUser().setFirstName(trainee.getFirstName());
+        managed.getUser().setLastName(trainee.getLastName());
+        managed.getUser().setActive(trainee.isActive());
+        managed.setDateOfBirth(trainee.getDateOfBirth());
+        managed.setAddress(trainee.getAddress());
 
-        logger.info("Updating Trainee profile: {}", existing.getUserName());
-        return traineeDao.update(existing);
+        logger.info("Updating Trainee profile: {}", managed.getUser().getUserName());
+        // 'managed' is attached to Persistence Context — dirty checking updates DB automatically
+        return toDomain(managed);
     }
 
     public void deleteTraineeByUsername(String username) {
         logger.info("Deleting Trainee profile with username: {}", username);
-        Trainee trainee = findByUsername(username)
+        TraineeEntity entity = traineeDao.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("Trainee not found: " + username));
-        traineeDao.delete(trainee.getId());
+        traineeDao.delete(entity.getId());
     }
 
     @Transactional(readOnly = true)
     public Optional<Trainee> getTraineeById(Long id) {
         validateId(id, "Trainee ID");
         logger.info("Fetching Trainee profile with ID: {}", id);
-        return traineeDao.findById(id);
+        return traineeDao.findById(id).map(this::toDomain);
     }
 
     @Transactional(readOnly = true)
     public Optional<Trainee> findByUsername(String username) {
         logger.info("Fetching Trainee by username: {}", username);
-        return traineeDao.findByUsername(username);
+        return traineeDao.findByUsername(username).map(this::toDomain);
     }
 
     @Transactional(readOnly = true)
     public boolean authenticate(String username, String password) {
         logger.info("Authenticating Trainee: {}", username);
-        return findByUsername(username)
-                .map(trainee -> trainee.getPassword().equals(password))
+        if (isBlank(username) || isBlank(password)) {
+            return false;
+        }
+        return traineeDao.findByUsername(username)
+                .map(entity -> entity.getUser() != null
+                        && entity.getUser().isActive()
+                        && entity.getUser().getPassword().equals(password))
                 .orElse(false);
     }
 
@@ -97,60 +116,100 @@ public class TraineeService {
             throw new IllegalArgumentException("New password must not be blank");
         }
         logger.info("Changing password for Trainee: {}", username);
-        Trainee trainee = findByUsername(username)
+        TraineeEntity managed = traineeDao.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("Trainee not found: " + username));
-        trainee.setPassword(newPassword);
-        traineeDao.update(trainee);
+        managed.getUser().setPassword(newPassword);
     }
 
     public void toggleActivation(String username, boolean isActive) {
         logger.info("Setting activation status to {} for Trainee: {}", isActive, username);
-        Trainee trainee = findByUsername(username)
+        TraineeEntity managed = traineeDao.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("Trainee not found: " + username));
-        if (trainee.isActive() == isActive) {
+        if (managed.getUser().isActive() == isActive) {
             throw new IllegalStateException("Trainee is already " + (isActive ? "active" : "inactive"));
         }
-        trainee.setActive(isActive);
-        traineeDao.update(trainee);
+        managed.getUser().setActive(isActive);
     }
 
     @Transactional(readOnly = true)
     public List<Trainer> getUnassignedTrainers(String traineeUsername) {
         logger.info("Fetching unassigned trainers for Trainee: {}", traineeUsername);
-        Trainee trainee = findByUsername(traineeUsername)
+        TraineeEntity trainee = traineeDao.findByUsername(traineeUsername)
                 .orElseThrow(() -> new IllegalArgumentException("Trainee not found: " + traineeUsername));
 
         List<String> assignedUsernames = trainee.getTrainers() == null
                 ? List.of()
-                : trainee.getTrainers().stream().map(Trainer::getUserName).toList();
+                : trainee.getTrainers().stream()
+                .map(t -> t.getUser().getUserName())
+                .toList();
 
         return trainerDao.findAll().stream()
-                .filter(Trainer::isActive)
-                .filter(trainer -> !assignedUsernames.contains(trainer.getUserName()))
-                .collect(Collectors.toList());
+                .filter(t -> t.getUser().isActive())
+                .filter(t -> !assignedUsernames.contains(t.getUser().getUserName()))
+                .map(this::toTrainerDomainWithoutTrainees)
+                .toList();
     }
 
     public List<Trainer> updateTrainersList(String traineeUsername, List<String> trainerUsernames) {
         logger.info("Updating trainers list for Trainee: {}", traineeUsername);
-        Trainee trainee = findByUsername(traineeUsername)
+        TraineeEntity managed = traineeDao.findByUsername(traineeUsername)
                 .orElseThrow(() -> new IllegalArgumentException("Trainee not found: " + traineeUsername));
 
-        List<Trainer> newTrainers = trainerDao.findAll().stream()
-                .filter(t -> trainerUsernames.contains(t.getUserName()))
-                .collect(Collectors.toList());
+        List<TrainerEntity> newTrainerEntities = trainerDao.findAll().stream()
+                .filter(t -> trainerUsernames.contains(t.getUser().getUserName()))
+                .toList();
 
-        trainee.setTrainers(newTrainers);
-        traineeDao.update(trainee);
-        return newTrainers;
+        managed.setTrainers(new ArrayList<>(newTrainerEntities));
+
+        return newTrainerEntities.stream()
+                .map(this::toTrainerDomainWithoutTrainees)
+                .toList();
     }
 
     private List<String> allUsernames() {
         List<String> usernames = new ArrayList<>();
-        traineeDao.findAll().forEach(trainee -> usernames.add(trainee.getUserName()));
+        traineeDao.findAll().forEach(t -> usernames.add(t.getUser().getUserName()));
         if (trainerDao != null) {
-            trainerDao.findAll().forEach(trainer -> usernames.add(trainer.getUserName()));
+            trainerDao.findAll().forEach(t -> usernames.add(t.getUser().getUserName()));
         }
         return usernames;
+    }
+
+
+    private Trainee toDomain(TraineeEntity entity) {
+        Trainee domain = new Trainee();
+        domain.setId(entity.getId());
+        if (entity.getUser() != null) {
+            domain.setFirstName(entity.getUser().getFirstName());
+            domain.setLastName(entity.getUser().getLastName());
+            domain.setUserName(entity.getUser().getUserName());
+            domain.setPassword(entity.getUser().getPassword());
+            domain.setActive(entity.getUser().isActive());
+        }
+        domain.setDateOfBirth(entity.getDateOfBirth());
+        domain.setAddress(entity.getAddress());
+
+        if (entity.getTrainers() != null) {
+            List<Trainer> trainers = entity.getTrainers().stream()
+                    .map(this::toTrainerDomainWithoutTrainees)
+                    .toList();
+            domain.setTrainers(trainers);
+        }
+        return domain;
+    }
+
+    private Trainer toTrainerDomainWithoutTrainees(TrainerEntity entity) {
+        Trainer trainer = new Trainer();
+        trainer.setId(entity.getId());
+        trainer.setSpecialization(entity.getSpecialization());
+        if (entity.getUser() != null) {
+            trainer.setFirstName(entity.getUser().getFirstName());
+            trainer.setLastName(entity.getUser().getLastName());
+            trainer.setUserName(entity.getUser().getUserName());
+            trainer.setPassword(entity.getUser().getPassword());
+            trainer.setActive(entity.getUser().isActive());
+        }
+        return trainer;
     }
 
     private void validateTrainee(Trainee trainee, boolean update) {

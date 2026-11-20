@@ -3,6 +3,10 @@ package org.example.service;
 import org.example.dao.TraineeDao;
 import org.example.dao.TrainerDao;
 import org.example.dao.TrainingDao;
+import org.example.entity.TraineeEntity;
+import org.example.entity.TrainerEntity;
+import org.example.entity.TrainingEntity;
+import org.example.entity.TrainingTypeEntity;
 import org.example.model.Training;
 import org.example.model.TrainingType;
 import org.slf4j.Logger;
@@ -42,17 +46,31 @@ public class TrainingService {
     public Training createTraining(Training training) {
         validateTraining(training);
 
-        if (traineeDao.findByUsername(training.getTraineeUsername()).isEmpty()) {
-            throw new IllegalArgumentException("Trainee not found: " + training.getTraineeUsername());
-        }
-        if (trainerDao.findByUsername(training.getTrainerUsername()).isEmpty()) {
-            throw new IllegalArgumentException("Trainer not found: " + training.getTrainerUsername());
-        }
+        TraineeEntity trainee = traineeDao.findByUsername(training.getTraineeUsername())
+                .orElseThrow(() -> new IllegalArgumentException("Trainee not found: " + training.getTraineeUsername()));
+
+        TrainerEntity trainer = trainerDao.findByUsername(training.getTrainerUsername())
+                .orElseThrow(() -> new IllegalArgumentException("Trainer not found: " + training.getTrainerUsername()));
+
+        String typeName = (training.getTrainingType() != null && training.getTrainingType().trainingTypeName() != null)
+                ? training.getTrainingType().trainingTypeName()
+                : trainer.getSpecialization();
+
+        TrainingTypeEntity trainingType = trainingDao.findTrainingTypeByName(typeName)
+                .orElseThrow(() -> new IllegalArgumentException("Training type not found: " + typeName));
+
+        TrainingEntity entity = new TrainingEntity();
+        entity.setTrainee(trainee);
+        entity.setTrainer(trainer);
+        entity.setTrainingType(trainingType);
+        entity.setTrainingName(training.getTrainingName());
+        entity.setTrainingDate(training.getTrainingDate());
+        entity.setTrainingDuration(training.getTrainingDuration());
 
         logger.info("Creating new Training: {}", training.getTrainingName());
-        Training savedTraining = trainingDao.save(training);
+        TrainingEntity savedEntity = trainingDao.save(entity);
         logger.info("Training created successfully");
-        return savedTraining;
+        return toDomain(savedEntity);
     }
 
     @Transactional(readOnly = true)
@@ -61,25 +79,57 @@ public class TrainingService {
             throw new IllegalArgumentException("Training ID must be positive");
         }
         logger.info("Fetching Training with ID: {}", id);
-        return trainingDao.findById(id);
+        return trainingDao.findById(id).map(this::toDomain);
     }
 
     @Transactional(readOnly = true)
     public List<Training> getTraineeTrainings(String username, LocalDate fromDate, LocalDate toDate, String trainerName, String trainingTypeName) {
         logger.info("Fetching trainings for Trainee: {} with criteria", username);
-        return trainingDao.findTrainingsByTraineeUsernameAndCriteria(username, fromDate, toDate, trainerName, trainingTypeName);
+        return trainingDao.findTrainingsByTraineeUsernameAndCriteria(username, fromDate, toDate, trainerName, trainingTypeName)
+                .stream()
+                .map(this::toDomain)
+                .toList();
     }
 
     @Transactional(readOnly = true)
     public List<Training> getTrainerTrainings(String username, LocalDate fromDate, LocalDate toDate, String traineeName) {
         logger.info("Fetching trainings for Trainer: {} with criteria", username);
-        return trainingDao.findTrainingsByTrainerUsernameAndCriteria(username, fromDate, toDate, traineeName);
+        return trainingDao.findTrainingsByTrainerUsernameAndCriteria(username, fromDate, toDate, traineeName)
+                .stream()
+                .map(this::toDomain)
+                .toList();
     }
 
     @Transactional(readOnly = true)
     public List<TrainingType> getAllTrainingTypes() {
         logger.info("Fetching all Training Types");
-        return trainingDao.findAllTrainingTypes();
+        return trainingDao.findAllTrainingTypes()
+                .stream()
+                .map(tt -> new TrainingType(tt.getId(), tt.getTrainingTypeName()))
+                .toList();
+    }
+
+    private Training toDomain(TrainingEntity entity) {
+        Training domain = new Training();
+        domain.setId(entity.getId());
+        if (entity.getTrainee() != null && entity.getTrainee().getUser() != null) {
+            domain.setTraineeUsername(entity.getTrainee().getUser().getUserName());
+            domain.setTraineeName(entity.getTrainee().getUser().getFirstName() + " " + entity.getTrainee().getUser().getLastName());
+        }
+        if (entity.getTrainer() != null && entity.getTrainer().getUser() != null) {
+            domain.setTrainerUsername(entity.getTrainer().getUser().getUserName());
+            domain.setTrainerName(entity.getTrainer().getUser().getFirstName() + " " + entity.getTrainer().getUser().getLastName());
+        }
+        if (entity.getTrainingType() != null) {
+            domain.setTrainingType(new TrainingType(
+                    entity.getTrainingType().getId(),
+                    entity.getTrainingType().getTrainingTypeName()
+            ));
+        }
+        domain.setTrainingName(entity.getTrainingName());
+        domain.setTrainingDate(entity.getTrainingDate());
+        domain.setTrainingDuration(entity.getTrainingDuration());
+        return domain;
     }
 
     private void validateTraining(Training training) {

@@ -44,7 +44,7 @@ public class HibernateConfig {
         em.setDataSource(dataSource());
 
 
-        em.setPackagesToScan("org.example.model");
+        em.setPackagesToScan("org.example.entity");
 
         HibernateJpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
         em.setJpaVendorAdapter(vendorAdapter);
