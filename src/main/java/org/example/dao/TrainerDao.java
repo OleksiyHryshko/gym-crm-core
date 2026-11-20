@@ -1,56 +1,58 @@
 package org.example.dao;
 
-import org.example.model.Trainer;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import org.example.entity.TraineeEntity;
+import org.example.entity.TrainerEntity;
+import org.example.entity.UserEntity;
 import org.springframework.stereotype.Repository;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @Repository
 public class TrainerDao {
 
-    private final Map<Long, Trainer> storage;
-    private Long idCounter = 1L;
+    @PersistenceContext
+    private EntityManager entityManager;
 
-    @Autowired
-    public TrainerDao(Map<Long, Trainer> trainerStorage) {
-        this.storage = trainerStorage;
-    }
-    public Trainer save(Trainer trainer) {
+    public TrainerEntity save(TrainerEntity trainer) {
         if (trainer == null) {
             throw new IllegalArgumentException("Trainer must not be null");
         }
-        if (trainer.getUserId() == null) {
-            while (storage.containsKey(idCounter)) {
-                idCounter++;
-            }
-            trainer.setUserId(idCounter++);
-        } else if (storage.containsKey(trainer.getUserId())) {
-            throw new IllegalArgumentException("Trainer with ID " + trainer.getUserId() + " already exists");
-        }
-        storage.put(trainer.getUserId(), trainer);
+        entityManager.persist(trainer);
         return trainer;
     }
 
-    public Optional<Trainer> findById(Long id) {
-        return Optional.ofNullable(storage.get(id));
+    public Optional<TrainerEntity> findById(Long id) {
+        return Optional.ofNullable(entityManager.find(TrainerEntity.class, id));
     }
 
-    public List<Trainer> findAll() {
-        return new ArrayList<>(storage.values());
+    public Optional<TrainerEntity> findByUsername(String username) {
+        return entityManager.createQuery(
+                        "SELECT t FROM TrainerEntity t WHERE t.user.userName = :username", TrainerEntity.class)
+                .setParameter("username", username)
+                .getResultStream().findFirst();
     }
 
-    public Trainer update(Trainer trainer) {
-        if (trainer == null || trainer.getUserId() == null) {
-            throw new IllegalArgumentException("Trainer and trainer ID must not be null");
-        }
-        if (!storage.containsKey(trainer.getUserId())) {
-            throw new IllegalArgumentException("Trainer with ID " + trainer.getUserId() + " does not exist");
-        }
-        storage.put(trainer.getUserId(), trainer);
-        return trainer;
+    public List<TrainerEntity> findAll() {
+        return entityManager.createQuery("FROM TrainerEntity", TrainerEntity.class)
+                .getResultList();
     }
+
+    public TrainerEntity update(TrainerEntity trainer) {
+        if (trainer == null || trainer.getId() == null) {
+            throw new IllegalArgumentException("Trainer and its ID must not be null");
+        }
+        return entityManager.merge(trainer);
+    }
+
+    public void delete(Long id) {
+        TrainerEntity entity = entityManager.find(TrainerEntity.class, id);
+        if (entity != null) {
+            entityManager.remove(entity);
+        }
+    }
+
+
 }

@@ -3,9 +3,11 @@ package org.example.model;
 import java.time.LocalDate;
 
 public class Training {
-    private Long trainingId;
-    private Long traineeId;
-    private Long trainerId;
+    private Long id;
+    private String traineeUsername;
+    private String trainerUsername;
+    private String traineeName;
+    private String trainerName;
     private String trainingName;
     private TrainingType trainingType;
     private LocalDate trainingDate;
@@ -14,23 +16,20 @@ public class Training {
     public Training() {
     }
 
-    public Training(Long traineeId, Long trainerId, String trainingName, TrainingType trainingType, LocalDate trainingDate, Integer trainingDuration) {
-        this.traineeId = traineeId;
-        this.trainerId = trainerId;
-        this.trainingName = trainingName;
-        this.trainingType = trainingType;
-        this.trainingDate = trainingDate;
-        this.trainingDuration = trainingDuration;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public Long getTrainingId() { return trainingId; }
-    public void setTrainingId(Long trainingId) { this.trainingId = trainingId; }
+    public String getTraineeUsername() { return traineeUsername; }
+    public void setTraineeUsername(String traineeUsername) { this.traineeUsername = traineeUsername; }
 
-    public Long getTraineeId() { return traineeId; }
-    public void setTraineeId(Long traineeId) { this.traineeId = traineeId; }
+    public String getTrainerUsername() { return trainerUsername; }
+    public void setTrainerUsername(String trainerUsername) { this.trainerUsername = trainerUsername; }
 
-    public Long getTrainerId() { return trainerId; }
-    public void setTrainerId(Long trainerId) { this.trainerId = trainerId; }
+    public String getTraineeName() { return traineeName; }
+    public void setTraineeName(String traineeName) { this.traineeName = traineeName; }
+
+    public String getTrainerName() { return trainerName; }
+    public void setTrainerName(String trainerName) { this.trainerName = trainerName; }
 
     public String getTrainingName() { return trainingName; }
     public void setTrainingName(String trainingName) { this.trainingName = trainingName; }

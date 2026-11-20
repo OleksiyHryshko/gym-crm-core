@@ -1,9 +1,9 @@
 package org.example.config;
 
 
-import org.example.model.Trainee;
-import org.example.model.Trainer;
-import org.example.model.Training;
+import org.example.entity.TraineeEntity;
+import org.example.entity.TrainerEntity;
+import org.example.entity.TrainingEntity;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -14,17 +14,17 @@ import java.util.Map;
 public class StorageConfig {
 
     @Bean
-    public Map<Long, Trainer> trainerStorage() {
+    public Map<Long, TrainerEntity> trainerStorage() {
         return new HashMap<>();
     }
 
     @Bean
-    public Map<Long, Trainee> traineeStorage() {
+    public Map<Long, TraineeEntity> traineeStorage() {
         return new HashMap<>();
     }
 
     @Bean
-    public Map<Long, Training> trainingStorage() {
+    public Map<Long, TrainingEntity> trainingStorage() {
         return new HashMap<>();
     }
 }
