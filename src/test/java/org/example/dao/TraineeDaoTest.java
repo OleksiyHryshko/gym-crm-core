@@ -4,7 +4,6 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import org.example.entity.TraineeEntity;
 import org.example.entity.UserEntity;
-import org.example.model.Trainee;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -16,7 +15,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -29,21 +27,21 @@ class TraineeDaoTest {
     private TraineeDao traineeDao;
 
     @Test
-    void save_ShouldCallPersistAndReturnDomainModel() {
-        Trainee trainee = new Trainee();
-        trainee.setFirstName("John");
-        trainee.setLastName("Doe");
-        trainee.setUserName("John.Doe");
-        trainee.setPassword("secret1234");
-        trainee.setActive(true);
+    void save_ShouldCallPersistAndReturnEntity() {
+        UserEntity user = new UserEntity("John", "Doe", true);
+        user.setUserName("John.Doe");
+        user.setPassword("secret1234");
+
+        TraineeEntity trainee = new TraineeEntity();
+        trainee.setUser(user);
         trainee.setDateOfBirth(LocalDate.of(1995, 5, 10));
         trainee.setAddress("Main St");
 
-        Trainee result = traineeDao.save(trainee);
+        TraineeEntity result = traineeDao.save(trainee);
 
-        verify(entityManager, times(1)).persist(any(TraineeEntity.class));
+        verify(entityManager, times(1)).persist(trainee);
         assertNotNull(result);
-        assertEquals("John.Doe", result.getUserName());
+        assertEquals("John.Doe", result.getUser().getUserName());
         assertEquals("Main St", result.getAddress());
     }
 
@@ -53,7 +51,7 @@ class TraineeDaoTest {
     }
 
     @Test
-    void findById_WhenExists_ShouldReturnOptionalTrainee() {
+    void findById_WhenExists_ShouldReturnOptionalTraineeEntity() {
         UserEntity user = new UserEntity("John", "Doe", true);
         user.setUserName("John.Doe");
         TraineeEntity entity = new TraineeEntity();
@@ -62,48 +60,42 @@ class TraineeDaoTest {
 
         when(entityManager.find(TraineeEntity.class, 1L)).thenReturn(entity);
 
-        Optional<Trainee> result = traineeDao.findById(1L);
+        Optional<TraineeEntity> result = traineeDao.findById(1L);
 
         assertTrue(result.isPresent());
         assertEquals(1L, result.get().getId());
-        assertEquals("John.Doe", result.get().getUserName());
+        assertEquals("John.Doe", result.get().getUser().getUserName());
     }
 
     @Test
-    void findAll_ShouldReturnMappedList() {
+    void findAll_ShouldReturnEntityList() {
         @SuppressWarnings("unchecked")
         TypedQuery<TraineeEntity> query = mock(TypedQuery.class);
         when(entityManager.createQuery("FROM TraineeEntity", TraineeEntity.class)).thenReturn(query);
         when(query.getResultList()).thenReturn(List.of(new TraineeEntity(), new TraineeEntity()));
 
-        List<Trainee> result = traineeDao.findAll();
+        List<TraineeEntity> result = traineeDao.findAll();
 
         assertEquals(2, result.size());
     }
 
     @Test
-    void update_ShouldUpdateManagedEntityAndCallMerge() {
-        UserEntity existingUser = new UserEntity("Old", "Name", true);
-        TraineeEntity managed = new TraineeEntity();
-        managed.setId(1L);
-        managed.setUser(existingUser);
+    void update_ShouldCallMergeAndReturnEntity() {
+        UserEntity user = new UserEntity("New", "Name", false);
+        user.setUserName("New.Name");
+        user.setPassword("pass123456");
 
-        Trainee updateRequest = new Trainee();
-        updateRequest.setId(1L);
-        updateRequest.setFirstName("New");
-        updateRequest.setLastName("Name");
-        updateRequest.setUserName("New.Name");
-        updateRequest.setPassword("pass123456");
-        updateRequest.setActive(false);
+        TraineeEntity entity = new TraineeEntity();
+        entity.setId(1L);
+        entity.setUser(user);
 
-        when(entityManager.find(TraineeEntity.class, 1L)).thenReturn(managed);
-        when(entityManager.merge(managed)).thenReturn(managed);
+        when(entityManager.merge(entity)).thenReturn(entity);
 
-        Trainee result = traineeDao.update(updateRequest);
+        TraineeEntity result = traineeDao.update(entity);
 
-        verify(entityManager, times(1)).merge(managed);
-        assertEquals("New", result.getFirstName());
-        assertFalse(result.isActive());
+        verify(entityManager, times(1)).merge(entity);
+        assertEquals("New", result.getUser().getFirstName());
+        assertFalse(result.getUser().isActive());
     }
 
     @Test

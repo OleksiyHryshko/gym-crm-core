@@ -2,6 +2,8 @@ package org.example.service;
 
 import org.example.dao.TraineeDao;
 import org.example.dao.TrainerDao;
+import org.example.entity.TrainerEntity;
+import org.example.entity.UserEntity;
 import org.example.model.Trainer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,7 @@ class TrainerServiceTest {
     private TrainerService trainerService;
 
     private Trainer testTrainer;
+    private TrainerEntity trainerEntity;
 
     @BeforeEach
     void setUp() {
@@ -38,14 +41,23 @@ class TrainerServiceTest {
         testTrainer.setLastName("Doe");
         testTrainer.setActive(true);
         testTrainer.setSpecialization("Fitness");
+
+        UserEntity userEntity = new UserEntity("John", "Doe", true);
+        userEntity.setUserName("John.Doe");
+        userEntity.setPassword("pass123456");
+
+        trainerEntity = new TrainerEntity();
+        trainerEntity.setId(1L);
+        trainerEntity.setUser(userEntity);
+        trainerEntity.setSpecialization("Fitness");
     }
 
     @Test
     void createTrainer_ShouldGenerateUsernameAndPassword() {
         when(trainerDao.findAll()).thenReturn(List.of());
         when(traineeDao.findAll()).thenReturn(List.of());
-        when(trainerDao.save(any(Trainer.class))).thenAnswer(invocation -> {
-            Trainer saved = invocation.getArgument(0);
+        when(trainerDao.save(any(TrainerEntity.class))).thenAnswer(invocation -> {
+            TrainerEntity saved = invocation.getArgument(0);
             saved.setId(1L);
             return saved;
         });
@@ -56,17 +68,14 @@ class TrainerServiceTest {
         assertEquals("John.Doe", result.getUserName());
         assertNotNull(result.getPassword());
         assertEquals(10, result.getPassword().length());
-        verify(trainerDao, times(1)).save(any(Trainer.class));
+        verify(trainerDao, times(1)).save(any(TrainerEntity.class));
     }
 
     @Test
     void createTrainer_WhenUsernameExists_ShouldAddSuffix() {
-        Trainer existingTrainer = new Trainer();
-        existingTrainer.setUserName("John.Doe");
-
-        when(trainerDao.findAll()).thenReturn(List.of(existingTrainer));
+        when(trainerDao.findAll()).thenReturn(List.of(trainerEntity));
         when(traineeDao.findAll()).thenReturn(List.of());
-        when(trainerDao.save(any(Trainer.class))).thenReturn(testTrainer);
+        when(trainerDao.save(any(TrainerEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Trainer result = trainerService.createTrainer(testTrainer);
 
@@ -74,20 +83,18 @@ class TrainerServiceTest {
     }
 
     @Test
-    void updateTrainer_WhenExists_ShouldUpdateAndDelegateToDao() {
+    void updateTrainer_WhenExists_ShouldUpdateProfileAndPreserveSpecialization() {
         testTrainer.setUserName("John.Doe");
-        Trainer existing = new Trainer();
-        existing.setId(1L);
-        existing.setUserName("John.Doe");
+        testTrainer.setFirstName("Updated");
+        testTrainer.setSpecialization("Yoga"); // Should be ignored
 
-        when(trainerDao.findByUsername("John.Doe")).thenReturn(Optional.of(existing));
-        when(trainerDao.update(existing)).thenReturn(existing);
+        when(trainerDao.findByUsername("John.Doe")).thenReturn(Optional.of(trainerEntity));
 
         Trainer result = trainerService.updateTrainer(testTrainer);
 
-        assertSame(existing, result);
-        assertEquals("John", existing.getFirstName());
-        verify(trainerDao).update(existing);
+        assertEquals("Updated", result.getFirstName());
+        assertEquals("Fitness", result.getSpecialization());
+        assertEquals("Fitness", trainerEntity.getSpecialization());
     }
 
     @Test
@@ -96,12 +103,11 @@ class TrainerServiceTest {
         when(trainerDao.findByUsername("Missing.Trainer")).thenReturn(Optional.empty());
 
         assertThrows(IllegalArgumentException.class, () -> trainerService.updateTrainer(testTrainer));
-        verify(trainerDao, never()).update(any());
     }
 
     @Test
-    void getTrainerById_ShouldReturnTrainer() {
-        when(trainerDao.findById(1L)).thenReturn(Optional.of(testTrainer));
+    void getTrainerById_ShouldReturnMappedDomain() {
+        when(trainerDao.findById(1L)).thenReturn(Optional.of(trainerEntity));
 
         Optional<Trainer> result = trainerService.getTrainerById(1L);
 
@@ -110,35 +116,36 @@ class TrainerServiceTest {
     }
 
     @Test
-    void authenticate_WhenCredentialsMatch_ShouldReturnTrue() {
-        testTrainer.setUserName("John.Doe");
-        testTrainer.setPassword("pass123456");
-        when(trainerDao.findByUsername("John.Doe")).thenReturn(Optional.of(testTrainer));
+    void authenticate_WhenCredentialsMatchAndActive_ShouldReturnTrue() {
+        when(trainerDao.findByUsername("John.Doe")).thenReturn(Optional.of(trainerEntity));
 
         assertTrue(trainerService.authenticate("John.Doe", "pass123456"));
     }
 
     @Test
+    void authenticate_WhenTrainerIsInactive_ShouldReturnFalse() {
+        trainerEntity.getUser().setActive(false);
+        when(trainerDao.findByUsername("John.Doe")).thenReturn(Optional.of(trainerEntity));
+
+        assertFalse(trainerService.authenticate("John.Doe", "pass123456"));
+    }
+
+    @Test
     void changePassword_WhenTrainerExists_ShouldUpdatePassword() {
-        testTrainer.setUserName("John.Doe");
-        when(trainerDao.findByUsername("John.Doe")).thenReturn(Optional.of(testTrainer));
+        when(trainerDao.findByUsername("John.Doe")).thenReturn(Optional.of(trainerEntity));
 
         trainerService.changePassword("John.Doe", "newPass123");
 
-        assertEquals("newPass123", testTrainer.getPassword());
-        verify(trainerDao).update(testTrainer);
+        assertEquals("newPass123", trainerEntity.getUser().getPassword());
     }
 
     @Test
     void toggleActivation_ShouldUpdateStatus() {
-        testTrainer.setUserName("John.Doe");
-        testTrainer.setActive(true);
-        when(trainerDao.findByUsername("John.Doe")).thenReturn(Optional.of(testTrainer));
+        when(trainerDao.findByUsername("John.Doe")).thenReturn(Optional.of(trainerEntity));
 
         trainerService.toggleActivation("John.Doe", false);
 
-        assertFalse(testTrainer.isActive());
-        verify(trainerDao).update(testTrainer);
+        assertFalse(trainerEntity.getUser().isActive());
     }
 
     @Test

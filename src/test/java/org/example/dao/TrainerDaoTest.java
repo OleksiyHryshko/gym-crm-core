@@ -4,7 +4,6 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import org.example.entity.TrainerEntity;
 import org.example.entity.UserEntity;
-import org.example.model.Trainer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -15,7 +14,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,20 +26,20 @@ class TrainerDaoTest {
     private TrainerDao trainerDao;
 
     @Test
-    void save_ShouldCallPersistAndReturnDomainModel() {
-        Trainer trainer = new Trainer();
-        trainer.setFirstName("Alice");
-        trainer.setLastName("Smith");
-        trainer.setUserName("Alice.Smith");
-        trainer.setPassword("secret1234");
-        trainer.setActive(true);
+    void save_ShouldCallPersistAndReturnEntity() {
+        UserEntity user = new UserEntity("Alice", "Smith", true);
+        user.setUserName("Alice.Smith");
+        user.setPassword("secret1234");
+
+        TrainerEntity trainer = new TrainerEntity();
+        trainer.setUser(user);
         trainer.setSpecialization("Cardio");
 
-        Trainer result = trainerDao.save(trainer);
+        TrainerEntity result = trainerDao.save(trainer);
 
-        verify(entityManager, times(1)).persist(any(TrainerEntity.class));
+        verify(entityManager, times(1)).persist(trainer);
         assertNotNull(result);
-        assertEquals("Alice", result.getFirstName());
+        assertEquals("Alice", result.getUser().getFirstName());
         assertEquals("Cardio", result.getSpecialization());
     }
 
@@ -51,7 +49,7 @@ class TrainerDaoTest {
     }
 
     @Test
-    void findById_WhenExists_ShouldReturnTrainer() {
+    void findById_WhenExists_ShouldReturnTrainerEntity() {
         UserEntity user = new UserEntity("Bob", "Jones", true);
         TrainerEntity entity = new TrainerEntity();
         entity.setId(1L);
@@ -60,49 +58,42 @@ class TrainerDaoTest {
 
         when(entityManager.find(TrainerEntity.class, 1L)).thenReturn(entity);
 
-        Optional<Trainer> found = trainerDao.findById(1L);
+        Optional<TrainerEntity> found = trainerDao.findById(1L);
 
         assertTrue(found.isPresent());
-        assertEquals("Bob", found.get().getFirstName());
+        assertEquals("Bob", found.get().getUser().getFirstName());
         assertEquals("Weights", found.get().getSpecialization());
     }
 
     @Test
-    void findAll_ShouldReturnAllTrainers() {
+    void findAll_ShouldReturnAllTrainerEntities() {
         @SuppressWarnings("unchecked")
         TypedQuery<TrainerEntity> query = mock(TypedQuery.class);
         when(entityManager.createQuery("FROM TrainerEntity", TrainerEntity.class)).thenReturn(query);
         when(query.getResultList()).thenReturn(List.of(new TrainerEntity(), new TrainerEntity()));
 
-        List<Trainer> all = trainerDao.findAll();
+        List<TrainerEntity> all = trainerDao.findAll();
 
         assertEquals(2, all.size());
     }
 
     @Test
-    void update_ShouldUpdateManagedEntityAndCallMerge() {
-        UserEntity user = new UserEntity("A", "A", true);
-        TrainerEntity managed = new TrainerEntity();
-        managed.setId(1L);
-        managed.setUser(user);
-        managed.setSpecialization("Cardio");
+    void update_ShouldCallMergeAndReturnEntity() {
+        UserEntity user = new UserEntity("Updated", "Trainer", true);
+        user.setUserName("Updated.Trainer");
+        user.setPassword("pass123456");
 
-        Trainer updateRequest = new Trainer();
-        updateRequest.setId(1L);
-        updateRequest.setFirstName("Updated");
-        updateRequest.setLastName("Trainer");
-        updateRequest.setUserName("Updated.Trainer");
-        updateRequest.setPassword("pass123456");
-        updateRequest.setActive(true);
-        updateRequest.setSpecialization("Cardio");
+        TrainerEntity entity = new TrainerEntity();
+        entity.setId(1L);
+        entity.setUser(user);
+        entity.setSpecialization("Cardio");
 
-        when(entityManager.find(TrainerEntity.class, 1L)).thenReturn(managed);
-        when(entityManager.merge(managed)).thenReturn(managed);
+        when(entityManager.merge(entity)).thenReturn(entity);
 
-        Trainer result = trainerDao.update(updateRequest);
+        TrainerEntity result = trainerDao.update(entity);
 
-        verify(entityManager, times(1)).merge(managed);
-        assertEquals("Updated", result.getFirstName());
+        verify(entityManager, times(1)).merge(entity);
+        assertEquals("Updated", result.getUser().getFirstName());
     }
 
     @Test

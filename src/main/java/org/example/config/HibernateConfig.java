@@ -44,14 +44,13 @@ public class HibernateConfig {
         em.setDataSource(dataSource());
 
 
-        em.setPackagesToScan("org.example.model");
         em.setPackagesToScan("org.example.entity");
 
         HibernateJpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
         em.setJpaVendorAdapter(vendorAdapter);
 
         Properties properties = new Properties();
-        properties.setProperty("hibernate.hbm2ddl.auto", "validate");
+        properties.setProperty("hibernate.hbm2ddl.auto", "update");
         properties.setProperty("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
         properties.setProperty("hibernate.show_sql", "true");
         em.setJpaProperties(properties);
