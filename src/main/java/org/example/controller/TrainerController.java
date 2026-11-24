@@ -44,14 +44,9 @@ public class TrainerController {
     public ResponseEntity<RegistrationResponse> registerTrainer(
             @Valid @RequestBody TrainerRegistrationRequest request) {
 
-        Trainer trainer = new Trainer();
-        trainer.setFirstName(request.firstName());
-        trainer.setLastName(request.lastName());
-        trainer.setSpecialization(request.specialization());
 
-        Trainer created = gymFacade.createTrainer(trainer);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new RegistrationResponse(created.getUserName(), created.getPassword()));
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(gymFacade.createTrainer(request));
     }
 
 

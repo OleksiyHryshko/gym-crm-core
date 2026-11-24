@@ -67,4 +67,10 @@ public class TransactionLoggingFilter extends OncePerRequestFilter {
     private String maskSensitiveData(String payload) {
         return payload.replaceAll("(\"(?:password|oldPassword|newPassword)\"\\s*:\\s*\")([^\"]+)(\")", "$1***$3");
     }
+    private String maskQueryString(String queryString) {
+        if (queryString == null || queryString.isEmpty()) {
+            return "";
+        }
+        return queryString.replaceAll("(?i)(password|oldPassword|newPassword)=([^&]*)", "$1=***");
+    }
 }

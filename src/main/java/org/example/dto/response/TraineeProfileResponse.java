@@ -6,11 +6,11 @@ import java.util.List;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record TraineeProfileResponse(
-        String username,
         String firstName,
         String lastName,
+        String userName,
+        boolean isActive,
         LocalDate dateOfBirth,
         String address,
-        boolean isActive,
         List<TrainerSummaryResponse> trainers
 ) {}

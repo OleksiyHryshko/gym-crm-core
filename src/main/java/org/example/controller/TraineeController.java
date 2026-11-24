@@ -44,16 +44,7 @@ public class TraineeController {
     @Operation(summary = "Register a new trainee")
     public ResponseEntity<RegistrationResponse> registerTrainee(
             @Valid @RequestBody TraineeRegistrationRequest request) {
-
-        Trainee trainee = new Trainee();
-        trainee.setFirstName(request.firstName());
-        trainee.setLastName(request.lastName());
-        trainee.setDateOfBirth(request.dateOfBirth());
-        trainee.setAddress(request.address());
-
-        Trainee created = gymFacade.createTrainee(trainee);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new RegistrationResponse(created.getUserName(), created.getPassword()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(gymFacade.createTrainee(request));
     }
 
 

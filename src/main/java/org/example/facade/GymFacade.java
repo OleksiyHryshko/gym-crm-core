@@ -1,5 +1,10 @@
 package org.example.facade;
 
+import org.example.dto.request.TraineeRegistrationRequest;
+import org.example.dto.request.TrainerRegistrationRequest;
+import org.example.dto.response.RegistrationResponse;
+import org.example.mapper.TraineeMapper;
+import org.example.mapper.TrainerMapper;
 import org.example.model.Trainee;
 import org.example.model.Trainer;
 import org.example.model.Training;
@@ -8,6 +13,8 @@ import org.example.service.TraineeService;
 import org.example.service.TrainerService;
 import org.example.service.TrainingService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -20,22 +27,30 @@ public class GymFacade {
     private final TraineeService traineeService;
     private final TrainerService trainerService;
     private final TrainingService trainingService;
+    private final TraineeMapper traineeMapper;
+    private final TrainerMapper trainerMapper;
 
     @Autowired
-    public GymFacade(TraineeService traineeService, TrainerService trainerService, TrainingService trainingService) {
+    public GymFacade(TraineeService traineeService, TrainerService trainerService, TrainingService trainingService, TraineeMapper traineeMapper, TrainerMapper trainerMapper) {
         this.traineeService = traineeService;
         this.trainerService = trainerService;
         this.trainingService = trainingService;
+        this.traineeMapper = traineeMapper;
+        this.trainerMapper= trainerMapper;
     }
 
     // --- Public Registration (No Authentication Required) ---
 
-    public Trainee createTrainee(Trainee trainee) {
-        return traineeService.createTrainee(trainee);
+    public RegistrationResponse createTrainee(TraineeRegistrationRequest request) {
+        Trainee trainee = traineeService.createTrainee(traineeMapper.toModel(request));
+        return new RegistrationResponse(trainee.getUserName(), trainee.getPassword());
+
     }
 
-    public Trainer createTrainer(Trainer trainer) {
-        return trainerService.createTrainer(trainer);
+    public RegistrationResponse createTrainer(TrainerRegistrationRequest request) {
+        Trainer trainer = trainerService.createTrainer(trainerMapper.toModel(request));
+        return new RegistrationResponse(trainer.getUserName(), trainer.getPassword());
+
     }
 
     // --- Authentication ---

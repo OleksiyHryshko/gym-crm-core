@@ -5,7 +5,7 @@ import java.util.List;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record TrainerProfileResponse(
-        String username,
+        String userName,
         String firstName,
         String lastName,
         String specialization,

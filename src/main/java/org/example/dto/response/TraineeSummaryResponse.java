@@ -1,7 +1,7 @@
 package org.example.dto.response;
 
 public record TraineeSummaryResponse(
-        String username,
+        String userName,
         String firstName,
         String lastName
 ) {}
