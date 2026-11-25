@@ -1,16 +1,25 @@
 package org.example;
 
+import org.example.config.WebConfig;
+import org.example.dto.request.TrainerRegistrationRequest;
+import org.example.dto.response.RegistrationResponse;
 import org.example.facade.GymFacade;
-import org.example.model.Trainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.PropertySource;
 
 @Configuration
-@ComponentScan(basePackages = "org.example")
+@ComponentScan(
+        basePackages = "org.example",
+        excludeFilters = @ComponentScan.Filter(
+                type = FilterType.ASSIGNABLE_TYPE,
+                classes = WebConfig.class
+        )
+)
 @PropertySource("classpath:application.properties")
 public class GymApplication {
 
@@ -21,8 +30,10 @@ public class GymApplication {
 
         GymFacade gymFacade = context.getBean(GymFacade.class);
 
-        Trainer newTrainer = new Trainer("Oleksii", "Hryshko", true, "Java Development");
-        Trainer savedTrainer = gymFacade.createTrainer(newTrainer);
+        TrainerRegistrationRequest newTrainer = new TrainerRegistrationRequest(
+                "Oleksii", "Hryshko", "Java Development");
+
+        RegistrationResponse savedTrainer = gymFacade.createTrainer(newTrainer);
 
         logger.info("Created Trainer in Main: Username={}", savedTrainer.getUserName());
 

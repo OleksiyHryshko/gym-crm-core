@@ -1,37 +1,41 @@
 package org.example;
 
-import org.example.model.User;
-
 import java.security.SecureRandom;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
-public final class UserCredentialsGenerator {
+public class UserCredentialsGenerator {
 
-    private static final String PASSWORD_CHARACTERS =
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    private static final int PASSWORD_LENGTH = 10;
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private UserCredentialsGenerator() {
     }
 
-    public static String generateUsername(String firstName, String lastName, Collection<? extends User> existingUsers) {
-        String baseUsername = firstName + "." + lastName;
-        String username = baseUsername;
-        int suffix = 1;
-        while (isUsernameTaken(username, existingUsers)) {
-            username = baseUsername + suffix++;
+    public static String generateUsername(String firstName, String lastName, Collection<String> existingUsernames) {
+        String baseUsername = firstName.trim() + "." + lastName.trim();
+        if (existingUsernames == null || existingUsernames.isEmpty()) {
+            return baseUsername;
         }
-        return username;
-    }
 
-    private static boolean isUsernameTaken(String username, Collection<? extends User> existingUsers) {
-        return existingUsers.stream().anyMatch(user -> username.equals(user.getUserName()));
+        Set<String> taken = new HashSet<>(existingUsernames);
+        if (!taken.contains(baseUsername)) {
+            return baseUsername;
+        }
+
+        int suffix = 1;
+        while (taken.contains(baseUsername + suffix)) {
+            suffix++;
+        }
+        return baseUsername + suffix;
     }
 
     public static String generatePassword() {
-        StringBuilder password = new StringBuilder(10);
-        for (int i = 0; i < 10; i++) {
-            password.append(PASSWORD_CHARACTERS.charAt(RANDOM.nextInt(PASSWORD_CHARACTERS.length())));
+        StringBuilder password = new StringBuilder(PASSWORD_LENGTH);
+        for (int i = 0; i < PASSWORD_LENGTH; i++) {
+            password.append(CHARACTERS.charAt(RANDOM.nextInt(CHARACTERS.length())));
         }
         return password.toString();
     }

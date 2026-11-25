@@ -1,43 +1,87 @@
 package org.example.dao;
 
-import org.example.model.Training;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.TypedQuery;
+import org.example.entity.TrainingEntity;
+import org.example.entity.TrainingTypeEntity;
 import org.springframework.stereotype.Repository;
 
-import java.util.ArrayList;
+import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @Repository
 public class TrainingDao {
 
-    private final Map<Long, Training> storage;
-    private Long idCounter = 1L;
+    @PersistenceContext
+    private EntityManager entityManager;
 
-    @Autowired
-    public TrainingDao(Map<Long, Training> trainingStorage) {
-        this.storage = trainingStorage;
-    }
-
-    public Training save(Training training) {
+    public TrainingEntity save(TrainingEntity training) {
         if (training == null) {
             throw new IllegalArgumentException("Training must not be null");
         }
-        while (storage.containsKey(idCounter)) {
-            idCounter++;
-        }
-        Long trainingId = idCounter++;
-        training.setTrainingId(trainingId);
-        storage.put(trainingId, training);
+        entityManager.persist(training);
         return training;
     }
 
-    public Optional<Training> findById(Long id) {
-        return Optional.ofNullable(storage.get(id));
+    public Optional<TrainingEntity> findById(Long id) {
+        return Optional.ofNullable(entityManager.find(TrainingEntity.class, id));
     }
 
-    public List<Training> findAll() {
-        return new ArrayList<>(storage.values());
+    public List<TrainingEntity> findAll() {
+        return entityManager.createQuery("FROM TrainingEntity", TrainingEntity.class)
+                .getResultList();
+    }
+
+    public List<TrainingTypeEntity> findAllTrainingTypes() {
+        return entityManager.createQuery("FROM TrainingTypeEntity", TrainingTypeEntity.class)
+                .getResultList();
+    }
+
+    public Optional<TrainingTypeEntity> findTrainingTypeByName(String name) {
+        return entityManager.createQuery(
+                        "SELECT tt FROM TrainingTypeEntity tt WHERE tt.trainingTypeName = :name", TrainingTypeEntity.class)
+                .setParameter("name", name)
+                .getResultStream()
+                .findFirst();
+    }
+
+    public List<TrainingEntity> findTrainingsByTraineeUsernameAndCriteria(
+            String username, LocalDate fromDate, LocalDate toDate, String trainerName, String trainingTypeName) {
+
+        StringBuilder hql = new StringBuilder("SELECT t FROM TrainingEntity t WHERE t.trainee.user.userName = :username ");
+
+        if (fromDate != null) hql.append("AND t.trainingDate >= :fromDate ");
+        if (toDate != null) hql.append("AND t.trainingDate <= :toDate ");
+        if (trainerName != null) hql.append("AND t.trainer.user.firstName = :trainerName ");
+        if (trainingTypeName != null) hql.append("AND t.trainingType.trainingTypeName = :trainingTypeName ");
+
+        TypedQuery<TrainingEntity> query = entityManager.createQuery(hql.toString(), TrainingEntity.class);
+        query.setParameter("username", username);
+        if (fromDate != null) query.setParameter("fromDate", fromDate);
+        if (toDate != null) query.setParameter("toDate", toDate);
+        if (trainerName != null) query.setParameter("trainerName", trainerName);
+        if (trainingTypeName != null) query.setParameter("trainingTypeName", trainingTypeName);
+
+        return query.getResultList();
+    }
+
+    public List<TrainingEntity> findTrainingsByTrainerUsernameAndCriteria(
+            String username, LocalDate fromDate, LocalDate toDate, String traineeName) {
+
+        StringBuilder hql = new StringBuilder("SELECT t FROM TrainingEntity t WHERE t.trainer.user.userName = :username ");
+
+        if (fromDate != null) hql.append("AND t.trainingDate >= :fromDate ");
+        if (toDate != null) hql.append("AND t.trainingDate <= :toDate ");
+        if (traineeName != null) hql.append("AND t.trainee.user.firstName = :traineeName ");
+
+        TypedQuery<TrainingEntity> query = entityManager.createQuery(hql.toString(), TrainingEntity.class);
+        query.setParameter("username", username);
+        if (fromDate != null) query.setParameter("fromDate", fromDate);
+        if (toDate != null) query.setParameter("toDate", toDate);
+        if (traineeName != null) query.setParameter("traineeName", traineeName);
+
+        return query.getResultList();
     }
 }

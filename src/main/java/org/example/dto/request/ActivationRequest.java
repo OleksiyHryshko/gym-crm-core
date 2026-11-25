@@ -1,0 +1,8 @@
+package org.example.dto.request;
+
+import jakarta.validation.constraints.NotNull;
+
+public record ActivationRequest(
+        @NotNull(message = "isActive status is required")
+        Boolean isActive
+) {}
