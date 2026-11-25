@@ -46,11 +46,11 @@ public class TrainingService {
     public Training createTraining(Training training) {
         validateTraining(training);
 
-        TraineeEntity trainee = traineeDao.findByUsername(training.getTraineeUsername())
-                .orElseThrow(() -> new IllegalArgumentException("Trainee not found: " + training.getTraineeUsername()));
+        TraineeEntity trainee = traineeDao.findByUsername(training.getTraineeUserName())
+                .orElseThrow(() -> new IllegalArgumentException("Trainee not found: " + training.getTraineeUserName()));
 
-        TrainerEntity trainer = trainerDao.findByUsername(training.getTrainerUsername())
-                .orElseThrow(() -> new IllegalArgumentException("Trainer not found: " + training.getTrainerUsername()));
+        TrainerEntity trainer = trainerDao.findByUsername(training.getTrainerUserName())
+                .orElseThrow(() -> new IllegalArgumentException("Trainer not found: " + training.getTrainerUserName()));
 
         String typeName = (training.getTrainingType() != null && training.getTrainingType().trainingTypeName() != null)
                 ? training.getTrainingType().trainingTypeName()
@@ -113,11 +113,11 @@ public class TrainingService {
         Training domain = new Training();
         domain.setId(entity.getId());
         if (entity.getTrainee() != null && entity.getTrainee().getUser() != null) {
-            domain.setTraineeUsername(entity.getTrainee().getUser().getUserName());
+            domain.setTraineeUserName(entity.getTrainee().getUser().getUserName());
             domain.setTraineeName(entity.getTrainee().getUser().getFirstName() + " " + entity.getTrainee().getUser().getLastName());
         }
         if (entity.getTrainer() != null && entity.getTrainer().getUser() != null) {
-            domain.setTrainerUsername(entity.getTrainer().getUser().getUserName());
+            domain.setTrainerUserName(entity.getTrainer().getUser().getUserName());
             domain.setTrainerName(entity.getTrainer().getUser().getFirstName() + " " + entity.getTrainer().getUser().getLastName());
         }
         if (entity.getTrainingType() != null) {
@@ -145,10 +145,10 @@ public class TrainingService {
         if (training.getTrainingDuration() == null || training.getTrainingDuration() <= 0) {
             throw new IllegalArgumentException("Training duration must be greater than 0");
         }
-        if (training.getTraineeUsername() == null || training.getTraineeUsername().isBlank()) {
+        if (training.getTraineeUserName() == null || training.getTraineeUserName().isBlank()) {
             throw new IllegalArgumentException("Trainee username is required");
         }
-        if (training.getTrainerUsername() == null || training.getTrainerUsername().isBlank()) {
+        if (training.getTrainerUserName() == null || training.getTrainerUserName().isBlank()) {
             throw new IllegalArgumentException("Trainer username is required");
         }
     }

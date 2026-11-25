@@ -1,9 +1,8 @@
 package org.example.dto.response;
 
-public record TrainerSummaryResponse (
-    String firstName,
-    String lastName,
-    String userName,
-    String specialization
-) {
-}
+public record TrainerSummaryResponse(
+        String userName,
+        String firstName,
+        String lastName,
+        String specialization
+) {}

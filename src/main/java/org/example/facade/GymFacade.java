@@ -1,25 +1,21 @@
 package org.example.facade;
 
-import org.example.dto.request.TraineeRegistrationRequest;
-import org.example.dto.request.TrainerRegistrationRequest;
-import org.example.dto.response.RegistrationResponse;
+import org.example.dto.request.*;
+import org.example.dto.response.*;
 import org.example.mapper.TraineeMapper;
 import org.example.mapper.TrainerMapper;
+import org.example.mapper.TrainingMapper;
 import org.example.model.Trainee;
 import org.example.model.Trainer;
-import org.example.model.Training;
-import org.example.model.TrainingType;
 import org.example.service.TraineeService;
 import org.example.service.TrainerService;
 import org.example.service.TrainingService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
+import java.util.NoSuchElementException;
 
 @Component
 public class GymFacade {
@@ -29,38 +25,51 @@ public class GymFacade {
     private final TrainingService trainingService;
     private final TraineeMapper traineeMapper;
     private final TrainerMapper trainerMapper;
+    private final TrainingMapper trainingMapper;
 
     @Autowired
-    public GymFacade(TraineeService traineeService, TrainerService trainerService, TrainingService trainingService, TraineeMapper traineeMapper, TrainerMapper trainerMapper) {
+    public GymFacade(TraineeService traineeService,
+                     TrainerService trainerService,
+                     TrainingService trainingService,
+                     TraineeMapper traineeMapper,
+                     TrainerMapper trainerMapper,
+                     TrainingMapper trainingMapper) {
         this.traineeService = traineeService;
         this.trainerService = trainerService;
         this.trainingService = trainingService;
         this.traineeMapper = traineeMapper;
-        this.trainerMapper= trainerMapper;
+        this.trainerMapper = trainerMapper;
+        this.trainingMapper = trainingMapper;
     }
 
     // --- Public Registration (No Authentication Required) ---
 
     public RegistrationResponse createTrainee(TraineeRegistrationRequest request) {
-        Trainee trainee = traineeService.createTrainee(traineeMapper.toModel(request));
-        return new RegistrationResponse(trainee.getUserName(), trainee.getPassword());
-
+        Trainee created = traineeService.createTrainee(traineeMapper.toModel(request));
+        return traineeMapper.toRegistrationResponse(created);
     }
 
     public RegistrationResponse createTrainer(TrainerRegistrationRequest request) {
-        Trainer trainer = trainerService.createTrainer(trainerMapper.toModel(request));
-        return new RegistrationResponse(trainer.getUserName(), trainer.getPassword());
-
+        Trainer created = trainerService.createTrainer(trainerMapper.toModel(request));
+        return trainerMapper.toRegistrationResponse(created);
     }
 
     // --- Authentication ---
 
-    public boolean authenticateTrainee(String username, String password) {
-        return traineeService.authenticate(username, password);
+    public void login(String username, String password) {
+        requireAnyUserAuth(username, password);
     }
 
-    public boolean authenticateTrainer(String username, String password) {
-        return trainerService.authenticate(username, password);
+    public void changePassword(ChangePasswordRequest request) {
+        if (traineeService.authenticate(request.userName(), request.oldPassword())) {
+            traineeService.changePassword(request.userName(), request.newPassword());
+            return;
+        }
+        if (trainerService.authenticate(request.userName(), request.oldPassword())) {
+            trainerService.changePassword(request.userName(), request.newPassword());
+            return;
+        }
+        throw new SecurityException("Authentication failed for user: " + request.userName());
     }
 
     private void requireTraineeAuth(String username, String password) {
@@ -83,99 +92,93 @@ public class GymFacade {
 
     // --- Trainee Operations ---
 
-    public Optional<Trainee> getTraineeById(String authUsername, String authPassword, Long id) {
+    public TraineeProfileResponse getTraineeByUserName(String authUsername, String authPassword, String targetUsername) {
         requireTraineeAuth(authUsername, authPassword);
-        return traineeService.getTraineeById(id);
+        Trainee trainee = traineeService.findByUsername(targetUsername)
+                .orElseThrow(() -> new NoSuchElementException("Trainee not found: " + targetUsername));
+        return traineeMapper.toProfileResponse(trainee);
     }
 
-    public Optional<Trainee> getTraineeByUsername(String authUsername, String authPassword, String targetUsername) {
+    public TraineeProfileResponse updateTrainee(String authUsername, String authPassword, String username, UpdateTraineeRequest request) {
         requireTraineeAuth(authUsername, authPassword);
-        return traineeService.findByUsername(targetUsername);
+        Trainee updated = traineeService.updateTrainee(traineeMapper.toModel(username, request));
+        return traineeMapper.toProfileResponse(updated);
     }
 
-    public Trainee updateTrainee(String authUsername, String authPassword, Trainee trainee) {
-        requireTraineeAuth(authUsername, authPassword);
-        return traineeService.updateTrainee(trainee);
-    }
-
-    public void deleteTraineeByUsername(String authUsername, String authPassword, String targetUsername) {
+    public void deleteTraineeByUserName(String authUsername, String authPassword, String targetUsername) {
         requireTraineeAuth(authUsername, authPassword);
         traineeService.deleteTraineeByUsername(targetUsername);
     }
 
-    public void changeTraineePassword(String username, String oldPassword, String newPassword) {
-        requireTraineeAuth(username, oldPassword);
-        traineeService.changePassword(username, newPassword);
+    public void toggleTraineeActivation(String authUsername, String authPassword, String targetUsername, ActivationRequest request) {
+        requireTraineeAuth(authUsername, authPassword);
+        traineeService.toggleActivation(targetUsername, request.isActive());
     }
 
-    public void toggleTraineeActivation(String authUsername, String authPassword, String targetUsername, boolean isActive) {
+    public List<TrainerSummaryResponse> getUnassignedTrainers(String authUsername, String authPassword, String traineeUsername) {
         requireTraineeAuth(authUsername, authPassword);
-        traineeService.toggleActivation(targetUsername, isActive);
+        return traineeMapper.toTrainerSummaryResponseList(
+                traineeService.getUnassignedTrainers(traineeUsername)
+        );
     }
 
-    public List<Trainer> getUnassignedTrainers(String authUsername, String authPassword, String traineeUsername) {
+    public List<TrainerSummaryResponse> updateTraineeTrainersList(String authUsername,
+                                                                  String authPassword,
+                                                                  String traineeUsername,
+                                                                  UpdateTraineeTrainersRequest request) {
         requireTraineeAuth(authUsername, authPassword);
-        return traineeService.getUnassignedTrainers(traineeUsername);
-    }
-
-    public List<Trainer> updateTraineeTrainersList(String authUsername, String authPassword, String traineeUsername, List<String> trainerUsernames) {
-        requireTraineeAuth(authUsername, authPassword);
-        return traineeService.updateTrainersList(traineeUsername, trainerUsernames);
+        return traineeMapper.toTrainerSummaryResponseList(
+                traineeService.updateTrainersList(traineeUsername, request.trainerUserNames())
+        );
     }
 
     // --- Trainer Operations ---
 
-    public Optional<Trainer> getTrainerById(String authUsername, String authPassword, Long id) {
+    public TrainerProfileResponse getTrainerByUserName(String authUsername, String authPassword, String targetUsername) {
         requireTrainerAuth(authUsername, authPassword);
-        return trainerService.getTrainerById(id);
+        Trainer trainer = trainerService.findByUsername(targetUsername)
+                .orElseThrow(() -> new NoSuchElementException("Trainer not found: " + targetUsername));
+        return trainerMapper.toProfileResponse(trainer);
     }
 
-    public Optional<Trainer> getTrainerByUsername(String authUsername, String authPassword, String targetUsername) {
+    public TrainerProfileResponse updateTrainer(String authUsername, String authPassword, String username, UpdateTrainerRequest request) {
         requireTrainerAuth(authUsername, authPassword);
-        return trainerService.findByUsername(targetUsername);
+        Trainer updated = trainerService.updateTrainer(trainerMapper.toModel(username, request));
+        return trainerMapper.toProfileResponse(updated);
     }
 
-    public Trainer updateTrainer(String authUsername, String authPassword, Trainer trainer) {
+    public void toggleTrainerActivation(String authUsername, String authPassword, String targetUsername, ActivationRequest request) {
         requireTrainerAuth(authUsername, authPassword);
-        return trainerService.updateTrainer(trainer);
-    }
-
-    public void changeTrainerPassword(String username, String oldPassword, String newPassword) {
-        requireTrainerAuth(username, oldPassword);
-        trainerService.changePassword(username, newPassword);
-    }
-
-    public void toggleTrainerActivation(String authUsername, String authPassword, String targetUsername, boolean isActive) {
-        requireTrainerAuth(authUsername, authPassword);
-        trainerService.toggleActivation(targetUsername, isActive);
+        trainerService.toggleActivation(targetUsername, request.isActive());
     }
 
     // --- Training & TrainingType Operations ---
 
-    public Training createTraining(String authUsername, String authPassword, Training training) {
+    public void createTraining(String authUsername, String authPassword, CreateTrainingRequest request) {
         requireAnyUserAuth(authUsername, authPassword);
-        return trainingService.createTraining(training);
+        trainingService.createTraining(trainingMapper.toModel(request));
     }
 
-    public Optional<Training> getTrainingById(String authUsername, String authPassword, Long id) {
-        requireAnyUserAuth(authUsername, authPassword);
-        return trainingService.getTrainingById(id);
-    }
-
-    public List<Training> getTraineeTrainings(String authUsername, String authPassword, String traineeUsername,
-                                              LocalDate fromDate, LocalDate toDate, String trainerName, String trainingTypeName) {
+    public List<TrainingResponse> getTraineeTrainings(String authUsername, String authPassword, String traineeUsername,
+                                                      LocalDate fromDate, LocalDate toDate, String trainerName, String trainingTypeName) {
         requireTraineeAuth(authUsername, authPassword);
-        return trainingService.getTraineeTrainings(traineeUsername, fromDate, toDate, trainerName, trainingTypeName);
+        return trainingMapper.toTrainingResponseList(
+                trainingService.getTraineeTrainings(traineeUsername, fromDate, toDate, trainerName, trainingTypeName)
+        );
     }
 
-    public List<Training> getTrainerTrainings(String authUsername, String authPassword, String trainerUsername,
-                                              LocalDate fromDate, LocalDate toDate, String traineeName) {
+    public List<TrainerTrainingResponse> getTrainerTrainings(String authUsername, String authPassword, String trainerUsername,
+                                                             LocalDate fromDate, LocalDate toDate, String traineeName) {
         requireTrainerAuth(authUsername, authPassword);
-        return trainingService.getTrainerTrainings(trainerUsername, fromDate, toDate, traineeName);
+        return trainingMapper.toTrainerTrainingResponseList(
+                trainingService.getTrainerTrainings(trainerUsername, fromDate, toDate, traineeName)
+        );
     }
 
-    public List<TrainingType> getAllTrainingTypes(String authUsername, String authPassword) {
+    public List<TrainingTypeResponse> getAllTrainingTypes(String authUsername, String authPassword) {
         requireAnyUserAuth(authUsername, authPassword);
-        return trainingService.getAllTrainingTypes();
+        return trainingMapper.toTrainingTypeResponseList(
+                trainingService.getAllTrainingTypes()
+        );
     }
 }

@@ -4,8 +4,8 @@ import java.time.LocalDate;
 
 public class Training {
     private Long id;
-    private String traineeUsername;
-    private String trainerUsername;
+    private String traineeUserName;
+    private String trainerUserName;
     private String traineeName;
     private String trainerName;
     private String trainingName;
@@ -19,11 +19,11 @@ public class Training {
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
-    public String getTraineeUsername() { return traineeUsername; }
-    public void setTraineeUsername(String traineeUsername) { this.traineeUsername = traineeUsername; }
+    public String getTraineeUserName() { return traineeUserName; }
+    public void setTraineeUserName(String traineeUserName) { this.traineeUserName = traineeUserName; }
 
-    public String getTrainerUsername() { return trainerUsername; }
-    public void setTrainerUsername(String trainerUsername) { this.trainerUsername = trainerUsername; }
+    public String getTrainerUserName() { return trainerUserName; }
+    public void setTrainerUserName(String trainerUserName) { this.trainerUserName = trainerUserName; }
 
     public String getTraineeName() { return traineeName; }
     public void setTraineeName(String traineeName) { this.traineeName = traineeName; }

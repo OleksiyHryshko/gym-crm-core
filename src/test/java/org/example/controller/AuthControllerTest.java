@@ -14,10 +14,10 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,37 +40,64 @@ class AuthControllerTest {
     }
 
     @Test
-    void login_ValidTrainee_Returns200Ok() throws Exception {
-        when(gymFacade.authenticateTrainee("John.Doe", "pass123")).thenReturn(true);
+    void login_ValidUser_Returns200Ok() throws Exception {
+        doNothing().when(gymFacade).login("John.Doe", "pass123456");
 
         mockMvc.perform(get("/api/auth/login")
                         .param("username", "John.Doe")
-                        .param("password", "pass123"))
+                        .param("password", "pass123456"))
                 .andExpect(status().isOk());
+
+        verify(gymFacade).login("John.Doe", "pass123456");
     }
 
     @Test
     void login_InvalidCredentials_Returns401Unauthorized() throws Exception {
-        when(gymFacade.authenticateTrainee("John.Doe", "bad")).thenReturn(false);
-        when(gymFacade.authenticateTrainer("John.Doe", "bad")).thenReturn(false);
+        doThrow(new SecurityException("Authentication failed"))
+                .when(gymFacade).login("John.Doe", "bad");
 
         mockMvc.perform(get("/api/auth/login")
                         .param("username", "John.Doe")
                         .param("password", "bad"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401));
     }
 
     @Test
-    void changePassword_ValidTrainer_Returns200Ok() throws Exception {
-        ChangePasswordRequest request = new ChangePasswordRequest("Coach.Mike", "oldPass", "newPass");
-        when(gymFacade.authenticateTrainee("Coach.Mike", "oldPass")).thenReturn(false);
-        when(gymFacade.authenticateTrainer("Coach.Mike", "oldPass")).thenReturn(true);
+    void changePassword_ValidRequest_Returns200Ok() throws Exception {
+        ChangePasswordRequest request = new ChangePasswordRequest("Coach.Mike", "oldPass123", "newPass12345");
 
         mockMvc.perform(put("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
 
-        verify(gymFacade).changeTrainerPassword("Coach.Mike", "oldPass", "newPass");
+        verify(gymFacade).changePassword(request);
+    }
+
+    @Test
+    void changePassword_InvalidCredentials_Returns401Unauthorized() throws Exception {
+        ChangePasswordRequest request = new ChangePasswordRequest("Coach.Mike", "wrongPass", "newPass12345");
+        doThrow(new SecurityException("Authentication failed"))
+                .when(gymFacade).changePassword(request);
+
+        mockMvc.perform(put("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401));
+    }
+
+    @Test
+    void changePassword_BlankOrShortPassword_Returns400BadRequest() throws Exception {
+        ChangePasswordRequest invalidRequest = new ChangePasswordRequest("", "oldPass", "short");
+
+        mockMvc.perform(put("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+
+        verifyNoInteractions(gymFacade);
     }
 }

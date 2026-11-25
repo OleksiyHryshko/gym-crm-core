@@ -64,8 +64,8 @@ class TrainingServiceTest {
         Training result = trainingService.createTraining(training);
 
         assertEquals(10L, result.getId());
-        assertEquals("John.Doe", result.getTraineeUsername());
-        assertEquals("Jane.Smith", result.getTrainerUsername());
+        assertEquals("John.Doe", result.getTraineeUserName());
+        assertEquals("Jane.Smith", result.getTrainerUserName());
         assertEquals("Strength training", result.getTrainingName());
         verify(trainingDao).save(any(TrainingEntity.class));
     }
@@ -143,7 +143,7 @@ class TrainingServiceTest {
     @Test
     void createTraining_WhenTraineeUsernameIsMissing_ShouldThrowException() {
         Training training = validTraining();
-        training.setTraineeUsername(null);
+        training.setTraineeUserName(null);
 
         assertThrows(IllegalArgumentException.class, () -> trainingService.createTraining(training));
     }
@@ -151,7 +151,7 @@ class TrainingServiceTest {
     @Test
     void createTraining_WhenTrainerUsernameIsMissing_ShouldThrowException() {
         Training training = validTraining();
-        training.setTrainerUsername(null);
+        training.setTrainerUserName(null);
 
         assertThrows(IllegalArgumentException.class, () -> trainingService.createTraining(training));
     }
@@ -172,8 +172,8 @@ class TrainingServiceTest {
 
     private Training validTraining() {
         Training training = new Training();
-        training.setTraineeUsername("John.Doe");
-        training.setTrainerUsername("Jane.Smith");
+        training.setTraineeUserName("John.Doe");
+        training.setTrainerUserName("Jane.Smith");
         training.setTrainingName("Strength training");
         training.setTrainingType(new TrainingType(1L, "Strength"));
         training.setTrainingDate(LocalDate.of(2026, 1, 1));

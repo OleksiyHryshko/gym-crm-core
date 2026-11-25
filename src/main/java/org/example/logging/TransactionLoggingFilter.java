@@ -15,12 +15,19 @@ import org.springframework.web.util.ContentCachingResponseWrapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Component
 public class TransactionLoggingFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(TransactionLoggingFilter.class);
     public static final String TRANSACTION_ID_KEY = "transactionId";
+
+    private static final Pattern SENSITIVE_JSON_PATTERN =
+            Pattern.compile("(?i)(\"(?:password|oldPassword|newPassword)\"\\s*:\\s*\")([^\"]+)(\")");
+
+    private static final Pattern SENSITIVE_QUERY_PARAM_PATTERN =
+            Pattern.compile("(?i)(^|&)([^&=]*(?:password|pwd|secret|token)[^&=]*)=([^&]*)");
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -42,11 +49,11 @@ public class TransactionLoggingFilter extends OncePerRequestFilter {
             String requestBody = getBodyAsString(wrappedRequest.getContentAsByteArray());
             String responseBody = getBodyAsString(wrappedResponse.getContentAsByteArray());
 
-            String query = request.getQueryString() != null ? "?" + request.getQueryString() : "";
+            String maskedQuery = maskQueryString(request.getQueryString());
             log.info("REST Call | {} {}{} | Status: {} | Duration: {}ms | RequestBody: {} | ResponseBody: {}",
                     request.getMethod(),
                     request.getRequestURI(),
-                    query,
+                    maskedQuery,
                     wrappedResponse.getStatus(),
                     durationMs,
                     maskSensitiveData(requestBody),
@@ -64,13 +71,17 @@ public class TransactionLoggingFilter extends OncePerRequestFilter {
         return new String(content, StandardCharsets.UTF_8).replaceAll("\\s+", " ");
     }
 
-    private String maskSensitiveData(String payload) {
-        return payload.replaceAll("(\"(?:password|oldPassword|newPassword)\"\\s*:\\s*\")([^\"]+)(\")", "$1***$3");
+    String maskSensitiveData(String payload) {
+        if (payload == null) {
+            return "";
+        }
+        return SENSITIVE_JSON_PATTERN.matcher(payload).replaceAll("$1***$3");
     }
-    private String maskQueryString(String queryString) {
+
+    String maskQueryString(String queryString) {
         if (queryString == null || queryString.isEmpty()) {
             return "";
         }
-        return queryString.replaceAll("(?i)(password|oldPassword|newPassword)=([^&]*)", "$1=***");
+        return "?" + SENSITIVE_QUERY_PARAM_PATTERN.matcher(queryString).replaceAll("$1$2=***");
     }
 }

@@ -1,8 +1,9 @@
 package org.example;
 
 import org.example.config.WebConfig;
+import org.example.dto.request.TrainerRegistrationRequest;
+import org.example.dto.response.RegistrationResponse;
 import org.example.facade.GymFacade;
-import org.example.model.Trainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -29,13 +30,10 @@ public class GymApplication {
 
         GymFacade gymFacade = context.getBean(GymFacade.class);
 
-        Trainer newTrainer = new Trainer();
-        newTrainer.setFirstName("Oleksii");
-        newTrainer.setLastName("Hryshko");
-        newTrainer.setActive(true);
-        newTrainer.setSpecialization("Java Development");
+        TrainerRegistrationRequest newTrainer = new TrainerRegistrationRequest(
+                "Oleksii", "Hryshko", "Java Development");
 
-        Trainer savedTrainer = gymFacade.createTrainer(newTrainer);
+        RegistrationResponse savedTrainer = gymFacade.createTrainer(newTrainer);
 
         logger.info("Created Trainer in Main: Username={}", savedTrainer.getUserName());
 
