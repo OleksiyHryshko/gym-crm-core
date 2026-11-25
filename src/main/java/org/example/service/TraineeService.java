@@ -26,6 +26,7 @@ public class TraineeService {
     private TraineeDao traineeDao;
     private TrainerDao trainerDao;
 
+
     @Autowired
     public void setTraineeDao(TraineeDao traineeDao) {
         this.traineeDao = traineeDao;

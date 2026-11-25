@@ -13,6 +13,7 @@ import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
 import java.util.NoSuchElementException;
@@ -29,8 +30,12 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
     }
 
-    @ExceptionHandler({NoSuchElementException.class, EntityNotFoundException.class})
-    public ResponseEntity<ErrorResponse> handleNotFoundException(RuntimeException ex) {
+    @ExceptionHandler({
+            NoSuchElementException.class,
+            EntityNotFoundException.class,
+            NoResourceFoundException.class
+    })
+    public ResponseEntity<ErrorResponse> handleNotFoundException(Exception ex) {
         log.warn("Resource not found: {}", ex.getMessage());
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage());
     }

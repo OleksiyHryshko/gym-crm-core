@@ -38,7 +38,7 @@ public class TransactionLoggingFilter extends OncePerRequestFilter {
         MDC.put(TRANSACTION_ID_KEY, transactionId);
         response.setHeader("X-Transaction-Id", transactionId);
 
-        ContentCachingRequestWrapper wrappedRequest = new ContentCachingRequestWrapper(request);
+        ContentCachingRequestWrapper wrappedRequest = new ContentCachingRequestWrapper(request, 65536);
         ContentCachingResponseWrapper wrappedResponse = new ContentCachingResponseWrapper(response);
 
         long startTime = System.currentTimeMillis();

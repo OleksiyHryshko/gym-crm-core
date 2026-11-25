@@ -7,6 +7,7 @@ import org.example.entity.TraineeEntity;
 import org.example.entity.TrainerEntity;
 import org.example.entity.TrainingEntity;
 import org.example.entity.TrainingTypeEntity;
+import org.example.metrics.GymMetrics;
 import org.example.model.Training;
 import org.example.model.TrainingType;
 import org.slf4j.Logger;
@@ -27,6 +28,7 @@ public class TrainingService {
     private TrainingDao trainingDao;
     private TraineeDao traineeDao;
     private TrainerDao trainerDao;
+    private GymMetrics gymMetrics;
 
     @Autowired
     public void setTrainingDao(TrainingDao trainingDao) {
@@ -41,6 +43,11 @@ public class TrainingService {
     @Autowired
     public void setTrainerDao(TrainerDao trainerDao) {
         this.trainerDao = trainerDao;
+    }
+
+    @Autowired
+    public void setGymMetrics(GymMetrics gymMetrics) {
+        this.gymMetrics = gymMetrics;
     }
 
     public Training createTraining(Training training) {
@@ -69,6 +76,7 @@ public class TrainingService {
 
         logger.info("Creating new Training: {}", training.getTrainingName());
         TrainingEntity savedEntity = trainingDao.save(entity);
+        gymMetrics.incrementTrainingsCreated();
         logger.info("Training created successfully");
         return toDomain(savedEntity);
     }

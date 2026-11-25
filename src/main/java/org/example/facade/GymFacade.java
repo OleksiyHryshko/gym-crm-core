@@ -5,11 +5,14 @@ import org.example.dto.response.*;
 import org.example.mapper.TraineeMapper;
 import org.example.mapper.TrainerMapper;
 import org.example.mapper.TrainingMapper;
+import org.example.metrics.GymMetrics;
 import org.example.model.Trainee;
 import org.example.model.Trainer;
 import org.example.service.TraineeService;
 import org.example.service.TrainerService;
 import org.example.service.TrainingService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -20,12 +23,15 @@ import java.util.NoSuchElementException;
 @Component
 public class GymFacade {
 
+    private static final Logger log = LoggerFactory.getLogger(GymFacade.class);
+
     private final TraineeService traineeService;
     private final TrainerService trainerService;
     private final TrainingService trainingService;
     private final TraineeMapper traineeMapper;
     private final TrainerMapper trainerMapper;
     private final TrainingMapper trainingMapper;
+    private final GymMetrics gymMetrics;
 
     @Autowired
     public GymFacade(TraineeService traineeService,
@@ -33,13 +39,15 @@ public class GymFacade {
                      TrainingService trainingService,
                      TraineeMapper traineeMapper,
                      TrainerMapper trainerMapper,
-                     TrainingMapper trainingMapper) {
+                     TrainingMapper trainingMapper,
+                     GymMetrics gymMetrics) {
         this.traineeService = traineeService;
         this.trainerService = trainerService;
         this.trainingService = trainingService;
         this.traineeMapper = traineeMapper;
         this.trainerMapper = trainerMapper;
         this.trainingMapper = trainingMapper;
+        this.gymMetrics = gymMetrics;
     }
 
     // --- Public Registration (No Authentication Required) ---
@@ -62,32 +70,45 @@ public class GymFacade {
 
     public void changePassword(ChangePasswordRequest request) {
         if (traineeService.authenticate(request.userName(), request.oldPassword())) {
+            gymMetrics.incrementAuthSuccess();
             traineeService.changePassword(request.userName(), request.newPassword());
             return;
         }
         if (trainerService.authenticate(request.userName(), request.oldPassword())) {
+            gymMetrics.incrementAuthSuccess();
             trainerService.changePassword(request.userName(), request.newPassword());
             return;
         }
+        gymMetrics.incrementAuthFailure();
+        log.warn("Password change failed authentication for user: {}", request.userName());
         throw new SecurityException("Authentication failed for user: " + request.userName());
     }
 
     private void requireTraineeAuth(String username, String password) {
         if (!traineeService.authenticate(username, password)) {
+            gymMetrics.incrementAuthFailure();
+            log.warn("Authentication failed for Trainee: {}", username);
             throw new SecurityException("Authentication failed for Trainee: " + username);
         }
+        gymMetrics.incrementAuthSuccess();
     }
 
     private void requireTrainerAuth(String username, String password) {
         if (!trainerService.authenticate(username, password)) {
+            gymMetrics.incrementAuthFailure();
+            log.warn("Authentication failed for Trainer: {}", username);
             throw new SecurityException("Authentication failed for Trainer: " + username);
         }
+        gymMetrics.incrementAuthSuccess();
     }
 
     private void requireAnyUserAuth(String username, String password) {
         if (!traineeService.authenticate(username, password) && !trainerService.authenticate(username, password)) {
+            gymMetrics.incrementAuthFailure();
+            log.warn("Authentication failed for user: {}", username);
             throw new SecurityException("Authentication failed for user: " + username);
         }
+        gymMetrics.incrementAuthSuccess();
     }
 
     // --- Trainee Operations ---

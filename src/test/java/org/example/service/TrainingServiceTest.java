@@ -4,6 +4,7 @@ import org.example.dao.TraineeDao;
 import org.example.dao.TrainerDao;
 import org.example.dao.TrainingDao;
 import org.example.entity.*;
+import org.example.metrics.GymMetrics;
 import org.example.model.Training;
 import org.example.model.TrainingType;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,9 @@ class TrainingServiceTest {
 
     @Mock
     private TrainerDao trainerDao;
+
+    @Mock
+    private GymMetrics gymMetrics;
 
     @InjectMocks
     private TrainingService trainingService;
@@ -68,6 +72,7 @@ class TrainingServiceTest {
         assertEquals("Jane.Smith", result.getTrainerUserName());
         assertEquals("Strength training", result.getTrainingName());
         verify(trainingDao).save(any(TrainingEntity.class));
+        verify(gymMetrics).incrementTrainingsCreated();
     }
 
     @Test
@@ -77,6 +82,7 @@ class TrainingServiceTest {
 
         assertThrows(IllegalArgumentException.class, () -> trainingService.createTraining(training));
         verify(trainingDao, never()).save(any());
+        verifyNoInteractions(gymMetrics);
     }
 
     @Test
@@ -87,6 +93,7 @@ class TrainingServiceTest {
 
         assertThrows(IllegalArgumentException.class, () -> trainingService.createTraining(training));
         verify(trainingDao, never()).save(any());
+        verifyNoInteractions(gymMetrics);
     }
 
     @Test
