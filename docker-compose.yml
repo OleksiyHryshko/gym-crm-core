@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gym-postgres
+    environment:
+      POSTGRES_DB: gym_crm
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - gym-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d gym_crm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  gym-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: gym-crm:latest
+    container_name: gym-service
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/gym_crm
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      DATA_FILE_PATH: /app/initial_data.csv
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - gym-network
+
+networks:
+  gym-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
